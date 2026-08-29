@@ -11,3 +11,15 @@ export type {
 
 export { countRoundRobinMatches, countRounds, scheduleRoundRobin } from './round-robin.js';
 export { ABSENT_POINTS, calculateStandings, LOSS_POINTS, WIN_POINTS } from './standings.js';
+
+export type { BracketMatch, BracketSource, KnockoutBracket, KnockoutOptions } from './knockout.js';
+export { buildKnockout, nextPowerOfTwo, seedOrder } from './knockout.js';
+
+export type {
+  ClubCollision,
+  Group,
+  GroupCandidate,
+  GroupSplit,
+  GroupSplitOptions,
+} from './groups.js';
+export { splitIntoGroups } from './groups.js';
