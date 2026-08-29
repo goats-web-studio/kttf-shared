@@ -15,6 +15,10 @@
       "types": "./dist/rating/index.d.ts",
       "default": "./dist/rating/index.js"
     },
+    "./brackets": {
+      "types": "./dist/brackets/index.d.ts",
+      "default": "./dist/brackets/index.js"
+    },
     "./config/tsconfig.base.json": "./config/tsconfig.base.json",
     "./config/eslint": "./config/eslint.preset.js",
     "./config/prettier": "./config/prettier.json"
