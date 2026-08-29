@@ -25,6 +25,7 @@
   ],
   "prettier": "./config/prettier.json",
   "scripts": {
+    "prepare": "pnpm run build",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --coverage",

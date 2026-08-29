@@ -158,7 +158,16 @@ describe('документация — источник истины', () => {
 
   it('каждый ADR, проверяемый здесь, существует в журнале', () => {
     const decisions = readText('docs', '06-decisions.md');
-    for (const adr of ['ADR-001', 'ADR-003', 'ADR-004', 'ADR-005', 'ADR-006', 'ADR-007']) {
+    for (const adr of [
+      'ADR-001',
+      'ADR-003',
+      'ADR-004',
+      'ADR-005',
+      'ADR-006',
+      'ADR-007',
+      'ADR-008',
+      'ADR-009',
+    ]) {
       expect(decisions, `${adr} отсутствует в журнале`).toContain(adr);
     }
   });
