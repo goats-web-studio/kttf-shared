@@ -19,6 +19,10 @@
       "types": "./dist/brackets/index.d.ts",
       "default": "./dist/brackets/index.js"
     },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "default": "./dist/errors/index.js"
+    },
     "./config/tsconfig.base.json": "./config/tsconfig.base.json",
     "./config/eslint": "./config/eslint.preset.js",
     "./config/prettier": "./config/prettier.json"
