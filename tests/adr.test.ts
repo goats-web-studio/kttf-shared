@@ -46,7 +46,7 @@ describe('ADR-001 — три репозитория, приложения раз
   it.skipIf(!HAS_SIBLINGS)('в общей директории нет ничего, кроме репозиториев', () => {
     // Требование владельца продукта: верхний уровень — только проекты.
     // Всё общее, включая документацию и конфигурацию, живёт в kttf-shared.
-    const allowed = new Set(['kttf-back', 'kttf-front', 'kttf-shared']);
+    const allowed = new Set(['kttf-back', 'kttf-front', 'kttf-shared', 'kttf-infra']);
     const unexpected = listWorkspace().filter((entry) => !allowed.has(entry));
     expect(
       unexpected,
