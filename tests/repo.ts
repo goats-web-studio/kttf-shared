@@ -43,6 +43,7 @@ export interface PackageJson {
   readonly scripts?: Readonly<Record<string, string>>;
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly devDependencies?: Readonly<Record<string, string>>;
+  readonly peerDependencies?: Readonly<Record<string, string>>;
 }
 
 export function readPackageJson(...segments: string[]): PackageJson {
@@ -51,4 +52,35 @@ export function readPackageJson(...segments: string[]): PackageJson {
 
 export function readText(...segments: string[]): string {
   return readFileSync(projectPath(...segments), 'utf8');
+}
+
+/** Исходники модуля без тестов: их зависимости в сборку не попадают. */
+export function listSources(...segments: string[]): string[] {
+  return readdirSync(projectPath(...segments))
+    .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
+    .sort();
+}
+
+/**
+ * Из чего модуль импортирует.
+ *
+ * Возвращает только внешние источники: относительные пути — это собственные
+ * файлы пакета, они по определению не зависимость.
+ */
+export function externalImports(...segments: string[]): string[] {
+  const found = new Set<string>();
+
+  for (const file of listSources(...segments)) {
+    const source = readText(...segments, file);
+
+    for (const match of source.matchAll(/(?:from|import)\s+'([^']+)'/g)) {
+      const target = match[1];
+
+      if (target !== undefined && !target.startsWith('.')) {
+        found.add(target);
+      }
+    }
+  }
+
+  return [...found].sort();
 }

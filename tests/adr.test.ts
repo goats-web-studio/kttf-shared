@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  externalImports,
   HAS_SIBLINGS,
   inProject,
   inWorkspace,
@@ -100,13 +101,36 @@ describe('ADR-005 — инструментарий', () => {
 });
 
 describe('чистые пакеты — запрет №2 брифа', () => {
-  it('у kttf-shared нет ни одной runtime-зависимости', () => {
+  it('движки не импортируют ничего внешнего', () => {
+    // Проверка по существу, а не по составу package.json: бриф 3.3 требует
+    // нулевых зависимостей именно от rating и brackets, потому что один и тот
+    // же код исполняется на сервере и в браузере в офлайне. Раньше здесь
+    // стоял запрет зависимостей у всего пакета — он был строже правила,
+    // которое стерёг, и мешал положить рядом Zod-схемы. См. ADR-015.
+    for (const module of ['rating', 'brackets']) {
+      expect(
+        externalImports('src', module),
+        `src/${module} тянет внешний код. Офлайн-расчёт обязан совпадать с серверным.`,
+      ).toEqual([]);
+    }
+  });
+
+  it('Zod объявлен peer-зависимостью, а не обычной', () => {
+    // Экземпляр Zod обязан быть один: схема, собранная одной копией
+    // библиотеки, не проходит instanceof в другой. См. ADR-015.
     const pkg = readPackageJson();
+
+    expect(pkg.dependencies ?? {}, 'Общий код не тянет зависимости за собой.').toEqual({});
+    expect(pkg.peerDependencies?.zod, 'Zod ожидается в peerDependencies').toMatch(/^\^?4\./);
     expect(
-      pkg.dependencies ?? {},
-      'Общий код исполняется и на сервере, и в браузере в офлайне. ' +
-        'Любая runtime-зависимость ставит это под угрозу.',
-    ).toEqual({});
+      pkg.devDependencies?.zod,
+      'Zod нужен и в devDependencies: без него prepare не соберёт пакет у потребителя.',
+    ).toBeDefined();
+  });
+
+  it('общие типы доступны отдельным подпутём', () => {
+    const pkg = readPackageJson();
+    expect(JSON.stringify(pkg), './types не экспортируется').toContain('./types');
   });
 
   it('покрытие закреплено порогом 100%, а не пожеланием', () => {
@@ -167,6 +191,8 @@ describe('документация — источник истины', () => {
       'ADR-007',
       'ADR-008',
       'ADR-009',
+      'ADR-015',
+      'ADR-016',
     ]) {
       expect(decisions, `${adr} отсутствует в журнале`).toContain(adr);
     }

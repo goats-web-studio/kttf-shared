@@ -8,7 +8,12 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       // test-cases.ts — генератор данных для тестов, а не код движка.
       // types.ts и index.ts — только типы и реэкспорты.
-      exclude: ['src/rating/test-cases.ts', 'src/rating/types.ts', 'src/index.ts'],
+      exclude: [
+        'src/rating/test-cases.ts',
+        'src/rating/types.ts',
+        'src/index.ts',
+        'src/types/index.ts',
+      ],
       // Бриф 5.1: чистые пакеты покрываются на 100%. Порог здесь означает,
       // что просадка ломает сборку, а не остаётся замечанием в отчёте.
       thresholds: {
