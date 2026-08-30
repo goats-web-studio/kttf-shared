@@ -38,19 +38,20 @@ _Архитектура, стек, модель данных, контракты
 
 ### 2.2. Фронтенд
 
-| Компонент            | Выбор                        |
-| -------------------- | ---------------------------- |
-| Сборка               | Vite 6                       |
-| Библиотека           | React 19 + TypeScript strict |
-| Роутинг              | TanStack Router              |
-| Серверное состояние  | TanStack Query               |
-| Клиентское состояние | Zustand                      |
-| Стили                | Tailwind CSS 4               |
-| Компоненты           | shadcn/ui                    |
-| Формы                | React Hook Form + Zod        |
-| Графики              | Recharts                     |
-| Локальное хранилище  | Dexie (IndexedDB)            |
-| PWA                  | vite-plugin-pwa (Workbox)    |
+| Компонент            | Выбор                         |
+| -------------------- | ----------------------------- |
+| Сборка               | Vite 8                        |
+| Библиотека           | React 19 + TypeScript strict  |
+| Роутинг              | TanStack Router               |
+| Серверное состояние  | TanStack Query                |
+| Клиентское состояние | Zustand                       |
+| Стили                | Tailwind CSS 4                |
+| Компоненты           | shadcn/ui                     |
+| Формы                | React Hook Form + Zod         |
+| Графики              | Recharts                      |
+| Локальное хранилище  | Dexie (IndexedDB)             |
+| PWA                  | vite-plugin-pwa (Workbox)     |
+| Локализация          | Собственный словарь (ADR-016) |
 
 ### 2.3. Мобильное
 
