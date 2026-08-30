@@ -23,3 +23,6 @@ export type {
   GroupSplitOptions,
 } from './groups.js';
 export { splitIntoGroups } from './groups.js';
+
+export type { PendingMatch } from './withdrawals.js';
+export { applyWithdrawals } from './withdrawals.js';
