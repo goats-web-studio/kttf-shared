@@ -20,13 +20,16 @@ const currentYear = new Date().getFullYear();
 
 const name = z.string().trim().min(1).max(100);
 
+/** Пол. Вынесен отдельно: его же ограничивают турниры (ТЗ 4.2). */
+export const genderSchema = z.enum(['MALE', 'FEMALE']);
+
 const profile = {
   lastName: name,
   firstName: name,
   // Отчество не обязательно — бриф, запрет №6.
   middleName: name.optional(),
   birthYear: z.number().int().min(1900).max(currentYear),
-  gender: z.enum(['MALE', 'FEMALE']),
+  gender: genderSchema,
   city: z.string().trim().min(1).max(100),
   photoUrl: z.url().max(500).optional(),
   clubId: z.uuid().optional(),
