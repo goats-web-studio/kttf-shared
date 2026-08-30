@@ -29,7 +29,23 @@ cd kttf-front  && pnpm lint && pnpm typecheck && pnpm test   # 23 теста
 
 Фронтенд целиком: `cd kttf-front && pnpm dev`, дальше `http://localhost:5173`. Запросы к `/api` уходят на `localhost:3000` через прокси дев-сервера — CORS в бэкенде не включён и не нужен.
 
-Если инфраструктура не поднята: `cd kttf-infra && cp .env.example .env && docker compose up -d`, затем `cd kttf-back && pnpm db:migrate`.
+**На чистой машине** (репозитории только что склонированы). Нужны Node 24+, pnpm 11 и запущенный Docker Desktop. Все четыре репозитория клонируются рядом, в одну папку: пути между ними относительные.
+
+```
+git clone https://github.com/goats-web-studio/kttf-shared.git
+git clone https://github.com/goats-web-studio/kttf-infra.git
+git clone https://github.com/goats-web-studio/kttf-back.git
+git clone https://github.com/goats-web-studio/kttf-front.git
+
+cd kttf-infra  && cp .env.example .env && docker compose up -d
+cd kttf-back   && cp .env.example .env && pnpm install && pnpm db:migrate
+cd kttf-front  && pnpm install
+cd kttf-shared && pnpm install
+```
+
+`.env` под гитигнором и по гиту не приезжает — запрет №9. Оба примера рабочие и согласованы между собой: пароль Postgres в `kttf-infra/.env.example` совпадает с тем, что зашит в `DATABASE_URL` файла `kttf-back/.env.example`. Меняете один — меняйте второй, иначе бэкенд не подключится к базе.
+
+**Данные по гиту не переезжают.** Клубы, игроки и турниры лежат в томе Postgres на той машине, где их завели. На новой база пустая: `pnpm db:migrate` создаёт схему, наполнять её нужно через API заново. Скрипта с тестовыми данными пока нет.
 
 API целиком: `cd kttf-back && pnpm build && pnpm start`, дальше `curl http://localhost:3000/api/v1/health` — ожидается `{"status":"ok","database":"up"}`.
 
