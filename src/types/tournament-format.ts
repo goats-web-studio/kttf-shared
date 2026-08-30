@@ -57,6 +57,12 @@ const groupsKnockout = z
   })
   .refine(exactlyOneSizing, { message: SIZING_MESSAGE });
 
+/**
+ * «Финалы по местам» — ТЗ 5.1: k-я финальная группа собирает тех, кто занял
+ * k-е место в своей группе. Поэтому финальных групп ровно столько, сколько
+ * выходит из группы: при меньшем числу вышедших некуда идти, при большем
+ * финальная группа осталась бы пустой.
+ */
 const groupsFinalGroups = z
   .object({
     type: z.literal('GROUPS_FINAL_GROUPS'),
@@ -64,7 +70,10 @@ const groupsFinalGroups = z
     finalGroupCount: z.number().int().positive().max(16),
     setsToWin,
   })
-  .refine(exactlyOneSizing, { message: SIZING_MESSAGE });
+  .refine(exactlyOneSizing, { message: SIZING_MESSAGE })
+  .refine((value) => value.finalGroupCount === value.advancePerGroup, {
+    message: 'Финальных групп столько же, сколько выходит из группы: они играют за места',
+  });
 
 export const formatConfigSchema = z.union([
   roundRobin,

@@ -77,6 +77,19 @@ describe('схема проведения', () => {
     );
   });
 
+  it('финальных групп столько же, сколько выходит из группы', () => {
+    // «Финалы по местам» (ТЗ 5.1): k-я группа собирает занявших k-е место.
+    // При другом числе групп кому-то из вышедших некуда идти.
+    const base = { type: 'GROUPS_FINAL_GROUPS', groupCount: 4, setsToWin: 3 };
+
+    expect(
+      formatConfigSchema.safeParse({ ...base, advancePerGroup: 2, finalGroupCount: 2 }).success,
+    ).toBe(true);
+    expect(
+      formatConfigSchema.safeParse({ ...base, advancePerGroup: 3, finalGroupCount: 2 }).success,
+    ).toBe(false);
+  });
+
   it('олимпийка знает про утешительную и матч за третье место', () => {
     expect(
       formatConfigSchema.safeParse({
