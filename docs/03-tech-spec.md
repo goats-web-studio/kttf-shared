@@ -508,6 +508,8 @@ type FormatConfig =
       groupCount?: number;
       groupSize?: number;
       advancePerGroup: number;
+      // Финалы по местам: k-я группа — занявшие k-е место в своей группе.
+      // Поэтому finalGroupCount === advancePerGroup, это проверяет схема.
       finalGroupCount: number;
       setsToWin: 2 | 3 | 4;
     };
@@ -828,6 +830,7 @@ GET    /api/v1/tournaments/:id/snapshot       # полное состояние 
 POST   /api/v1/tournaments/:id/sync           # синхронизация офлайн-операций
 
 GET    /api/v1/tournaments/:id/standings      # таблицы и места
+POST   /api/v1/tournaments/:id/tie-decisions  # решение судьи по равенству, ADR-008
 GET    /api/v1/tournaments/:id/results        # публичные результаты
 ```
 
@@ -840,6 +843,23 @@ POST   /api/v1/matches/:id/result     { setsA, setsB, setScores?, resultType }
 POST   /api/v1/matches/:id/cancel
 PATCH  /api/v1/matches/:id            # корректировка результата
 ```
+
+`result`, `cancel` и `PATCH` возвращают не только саму встречу:
+
+```typescript
+type MatchUpdateResult = {
+  match: MatchView;
+  updated: MatchView[]; // встречи, чей состав изменился следом (ADR-019)
+  nextStage: StageView | null; // плей-офф, достроенный по итогам групп (ADR-020)
+  blockedByTies: string[]; // группы, где равенство не разрешено судьёй
+};
+```
+
+`cancel` возвращает встречу в очередь: снимаются результат и стол, статус
+`CANCELLED` при этом не выставляется — ТЗ 6.3, ADR-021.
+
+Правка отклоняется кодом `DOWNSTREAM_MATCH_PLAYED`, если на этом результате
+держится уже сыгранная встреча ниже по сетке либо плей-офф, в котором играли.
 
 ### 7.7. Публичный экран
 
