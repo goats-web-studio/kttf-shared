@@ -365,8 +365,12 @@ model Match {
   stageId       String
   groupId       String?
 
-  playerAId     String
-  playerBId     String
+  // Участник может быть ещё не определён: в сетке полуфинал — это
+  // «победитель такой-то встречи». Источник — в sourceA/sourceB (ADR-019).
+  playerAId     String?
+  playerBId     String?
+  sourceA       Json?                    // { kind: 'WINNER'|'LOSER', matchId }
+  sourceB       Json?
 
   status        MatchStatus @default(PENDING)
   tableNumber   Int?
