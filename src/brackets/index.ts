@@ -16,6 +16,24 @@ export type { BracketMatch, BracketSource, KnockoutBracket, KnockoutOptions } fr
 export { buildKnockout, nextPowerOfTwo, seedOrder } from './knockout.js';
 
 export type {
+  BracketSlotMatch,
+  BracketSlotSource,
+  MatchSide,
+  SlotAssignment,
+} from './advancement.js';
+export { resolveBracketSlots } from './advancement.js';
+
+export type {
+  AdvancingSelection,
+  GroupPlacement,
+  GroupPlacementRow,
+} from './group-advance.js';
+export { selectAdvancing } from './group-advance.js';
+
+export type { MatchResultInput, ResultProblem } from './result.js';
+export { validateMatchResult } from './result.js';
+
+export type {
   ClubCollision,
   Group,
   GroupCandidate,

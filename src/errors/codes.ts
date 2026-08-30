@@ -23,6 +23,26 @@ export const ERROR_CODES = {
   RATE_LIMITED: 'RATE_LIMITED',
   /** Необработанный отказ. Наружу не выносит ничего, кроме кода. */
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+
+  // ---------- встречи: ТС 7.6 ----------
+
+  /** Турнир не идёт: счёт вводится только по ходу турнира. */
+  TOURNAMENT_NOT_RUNNING: 'TOURNAMENT_NOT_RUNNING',
+  /** Участник встречи ещё не определён — предыдущий круг не сыгран (ADR-019). */
+  MATCH_NOT_READY: 'MATCH_NOT_READY',
+  /** Результат уже введён: изменение идёт отдельным маршрутом (ТЗ 6.3). */
+  MATCH_ALREADY_FINISHED: 'MATCH_ALREADY_FINISHED',
+  /** Изменять нечего: результата у встречи нет. */
+  MATCH_HAS_NO_RESULT: 'MATCH_HAS_NO_RESULT',
+  /** Счёт не соответствует схеме встречи. `details.problem` — чем именно. */
+  INVALID_SCORE: 'INVALID_SCORE',
+  /**
+   * Правка отменила бы уже сыгранное ниже по сетке. Откатывать чужие
+   * результаты молча нельзя: сначала снимается нижняя встреча.
+   */
+  DOWNSTREAM_MATCH_PLAYED: 'DOWNSTREAM_MATCH_PLAYED',
+  /** Решение судьи не соответствует ни одному неразрешённому равенству. */
+  TIE_DECISION_INVALID: 'TIE_DECISION_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
