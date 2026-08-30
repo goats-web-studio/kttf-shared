@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { authSessionSchema, requestCodeSchema, verifyCodeSchema } from './auth.js';
+import {
+  authSessionSchema,
+  requestCodeResultSchema,
+  requestCodeSchema,
+  verifyCodeSchema,
+} from './auth.js';
 
 describe('телефон', () => {
   it('принимается только формат +7XXXXXXXXXX', () => {
@@ -64,5 +69,18 @@ describe('ответ входа', () => {
     expect(authSessionSchema.safeParse({ accessToken: 'a', refreshToken: 'r', user }).success).toBe(
       false,
     );
+  });
+});
+
+describe('ответ на запрос кода', () => {
+  it('отдаёт срок жизни и не отдаёт сам код', () => {
+    const parsed = requestCodeResultSchema.parse({ expiresInSeconds: 300, code: '123456' });
+
+    expect(parsed).toEqual({ expiresInSeconds: 300 });
+  });
+
+  it('нулевой и отрицательный срок бессмысленны', () => {
+    expect(requestCodeResultSchema.safeParse({ expiresInSeconds: 0 }).success).toBe(false);
+    expect(requestCodeResultSchema.safeParse({ expiresInSeconds: -1 }).success).toBe(false);
   });
 });

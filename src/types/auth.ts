@@ -35,6 +35,17 @@ export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
 export const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 export type RefreshInput = z.infer<typeof refreshSchema>;
 
+/**
+ * Ответ на запрос кода.
+ *
+ * Сам код наружу не уходит никогда — только срок его жизни, чтобы клиент мог
+ * показать обратный отсчёт и не предлагать повторную отправку раньше времени.
+ */
+export const requestCodeResultSchema = z.object({
+  expiresInSeconds: z.number().int().positive(),
+});
+export type RequestCodeResult = z.infer<typeof requestCodeResultSchema>;
+
 /** Роль в клубе, как она лежит в `ClubMember`. */
 export const clubRoleViewSchema = z.object({
   clubId: z.uuid(),
