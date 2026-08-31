@@ -185,6 +185,8 @@ export const tournamentViewSchema = z.object({
   createdAt: z.iso.datetime(),
   startedAt: z.iso.datetime().nullable(),
   finishedAt: z.iso.datetime().nullable(),
+  /** Момент начисления рейтинга по итогам — ТЗ 7.3. `null` до обсчёта. */
+  ratedAt: z.iso.datetime().nullable(),
 });
 export type TournamentView = z.infer<typeof tournamentViewSchema>;
 

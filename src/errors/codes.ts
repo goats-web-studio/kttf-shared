@@ -43,6 +43,24 @@ export const ERROR_CODES = {
   DOWNSTREAM_MATCH_PLAYED: 'DOWNSTREAM_MATCH_PLAYED',
   /** Решение судьи не соответствует ни одному неразрешённому равенству. */
   TIE_DECISION_INVALID: 'TIE_DECISION_INVALID',
+
+  // ---------- завершение турнира: ТС 7.5 ----------
+
+  /**
+   * Не все встречи сыграны — турнир завершать рано (ТЗ 4.1).
+   * `details.matchIds` — чего именно не хватает.
+   */
+  TOURNAMENT_NOT_COMPLETE: 'TOURNAMENT_NOT_COMPLETE',
+  /**
+   * В таблице осталось равенство, которое судья не разрешил (ADR-008).
+   * Пока места не определены, турнир не завершается. `details.groups` — где.
+   */
+  TIES_UNRESOLVED: 'TIES_UNRESOLVED',
+  /**
+   * У участника сыгранной встречи нет рейтинга, зафиксированного на старте.
+   * Считать по текущему вместо снимка нельзя — это тихо нарушило бы ТС 5.4.
+   */
+  RATING_SNAPSHOT_MISSING: 'RATING_SNAPSHOT_MISSING',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

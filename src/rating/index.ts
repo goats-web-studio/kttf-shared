@@ -3,9 +3,15 @@ export type {
   MatchFactors,
   MatchInput,
   MatchOutput,
+  PlayerRatingOutcome,
   PlayerSnapshot,
+  RatedMatch,
+  RatedPlayer,
+  RatingEventDraft,
   ResultType,
   TournamentLevel,
+  TournamentRatingInput,
+  TournamentRatingResult,
 } from './types.js';
 
 export {
@@ -30,3 +36,4 @@ export {
 } from './factors.js';
 export { negate, round2 } from './round.js';
 export { applyDelta, calculateMatch } from './calculate-match.js';
+export { calculateTournamentRating } from './tournament.js';
