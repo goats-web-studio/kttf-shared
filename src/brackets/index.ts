@@ -44,3 +44,14 @@ export { splitIntoGroups } from './groups.js';
 
 export type { PendingMatch } from './withdrawals.js';
 export { applyWithdrawals } from './withdrawals.js';
+
+export type {
+  BracketResult,
+  GroupTable,
+  Placement,
+  PlacementInput,
+  PlacementReason,
+  PlacementRow,
+  PlacementScheme,
+} from './placement-types.js';
+export { calculatePlacement } from './placement.js';
