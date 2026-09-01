@@ -20,6 +20,8 @@ const match = {
   resultType: null,
   bracketRound: 2,
   bracketSlot: 0,
+  startedAt: null,
+  finishedAt: null,
 };
 
 describe('встреча в сетке', () => {
@@ -38,6 +40,20 @@ describe('встреча в сетке', () => {
         sourceA: null,
         sourceB: null,
         bracketRound: 1,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('несёт время выхода на стол и закрытия', () => {
+    // Очередь консоли сортируется по тому, кто дольше не играл (ТЗ 6.1).
+    // Без этих полей приоритет пришлось бы выводить из порядка встреч,
+    // а он описывает сетку, а не зал.
+    expect(
+      matchViewSchema.safeParse({
+        ...match,
+        status: 'FINISHED',
+        startedAt: '2026-09-05T10:00:00.000Z',
+        finishedAt: '2026-09-05T10:25:00.000Z',
       }).success,
     ).toBe(true);
   });

@@ -46,6 +46,18 @@ export const matchViewSchema = z.object({
   /** Тур круговой схемы либо круг сетки. */
   bracketRound: z.number().int().nullable(),
   bracketSlot: z.number().int().nullable(),
+  /**
+   * Когда встречу поставили на стол и когда закрыли.
+   *
+   * Нужны консоли судьи: очередь сортируется по тому, кто дольше не играл
+   * (ТЗ 6.1), а подсказка «ждёт дольше всех» без времени не существует
+   * (ТЗ 6.3). Вывести их из порядка встреч нельзя — расписание задаёт
+   * очерёдность в сетке, а не в зале.
+   *
+   * `null` у `startedAt` — встреча ещё не выходила на стол.
+   */
+  startedAt: z.iso.datetime().nullable(),
+  finishedAt: z.iso.datetime().nullable(),
 });
 export type MatchView = z.infer<typeof matchViewSchema>;
 
