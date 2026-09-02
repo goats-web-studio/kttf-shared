@@ -696,11 +696,8 @@ matchesAtStart Int?                        // ratedMatches на тот же мо
 ```typescript
 // Dexie
 db.version(1).stores({
-  tournaments: 'id, status',
-  matches: 'id, tournamentId, status, [tournamentId+status]',
-  registrations: 'id, tournamentId, playerId',
-  players: 'id, lastName',
-  outbox: '++seq, tournamentId, syncedAt',
+  snapshots: 'tournamentId',
+  outbox: '++seq, tournamentId, syncedAt, [tournamentId+syncedAt]',
 });
 
 interface OutboxItem {
@@ -717,9 +714,14 @@ interface OutboxItem {
   payload: unknown;
   createdAt: number;
   syncedAt: number | null;
+  rejectedReason: string | null; // код отказа сервера, ТС 7.8
   attempts: number;
 }
 ```
+
+**Снимок хранится целиком, а не разложенным по таблицам.** Первая редакция раскладывала его на `tournaments`, `matches`, `registrations` и `players`, но консоль читает снимок только целиком: раскладка потребовала бы собирать его обратно при каждом чтении и раскладывать заново после каждой синхронизации, а сервер и так присылает готовый объект. Обоснование — ADR-027.
+
+Очередь осталась отдельной таблицей: у неё своя жизнь, свой порядок и свой признак отправленного.
 
 ### 6.3. Синхронизация
 
