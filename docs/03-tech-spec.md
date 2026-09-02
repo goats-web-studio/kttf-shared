@@ -783,8 +783,8 @@ REST, версионирование через префикс `/api/v1`. Фор
 ### 7.1. Аутентификация
 
 ```
-POST   /api/v1/auth/request-code     { phone }
-POST   /api/v1/auth/verify-code      { phone, code } → { accessToken, refreshToken, user }
+POST   /api/v1/auth/login            { identifier, password } → { accessToken, refreshToken, user }
+POST   /api/v1/auth/sign-up          { login, password, phone, playerId? } → то же
 POST   /api/v1/auth/refresh          { refreshToken }
 POST   /api/v1/auth/logout
 GET    /api/v1/auth/me
@@ -793,7 +793,7 @@ GET    /api/v1/auth/me
 ### 7.2. Игроки
 
 ```
-GET    /api/v1/players               ?search&city&clubId&page&limit
+GET    /api/v1/players               ?search&city&clubId&withoutAccount&page&limit
 GET    /api/v1/players/:id
 PATCH  /api/v1/players/:id
 GET    /api/v1/players/:id/rating-history   ?from&to
