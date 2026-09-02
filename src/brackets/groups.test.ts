@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { splitIntoGroups } from './groups.js';
+import { findClubCollisions, splitIntoGroups } from './groups.js';
 import type { GroupCandidate } from './groups.js';
 
 /** Посеянные участники без клубов: `s1` сильнейший. */
@@ -176,5 +176,62 @@ describe('splitIntoGroups — разведение по клубам', () => {
     }));
     const { clubCollisions } = splitIntoGroups(candidates, { groupCount: 4 });
     expect(clubCollisions).toEqual([]);
+  });
+});
+
+describe('findClubCollisions', () => {
+  it('называет всех одноклубников группы разом, а не парами', () => {
+    // Трое из одного клуба в одной группе — одно совпадение с тремя именами,
+    // иначе организатор увидит три строки об одном и том же.
+    const collisions = findClubCollisions(
+      [{ label: 'гр. 1', participants: ['a1', 'a2', 'a3', 'b1'] }],
+      new Map([
+        ['a1', 'alpha'],
+        ['a2', 'alpha'],
+        ['a3', 'alpha'],
+        ['b1', 'beta'],
+      ]),
+    );
+
+    expect(collisions).toEqual([
+      { club: 'alpha', group: 'гр. 1', participants: ['a1', 'a2', 'a3'] },
+    ]);
+  });
+
+  it('игрок без клуба ни с кем не совпадает', () => {
+    // «Ничей» участник разводить нечего: клуба у него нет вовсе.
+    const collisions = findClubCollisions(
+      [{ label: 'гр. 1', participants: ['x', 'y'] }],
+      new Map([['x', undefined]]),
+    );
+
+    expect(collisions).toEqual([]);
+  });
+
+  it('после ручной перестановки считается по новому составу', () => {
+    // ТЗ 5.3: организатор поменял игроков местами, и совпадение переехало
+    // в другую группу. Второго описания правила в системе нет.
+    const groups = [
+      { label: 'гр. 1', participants: ['a1', 'b1'] },
+      { label: 'гр. 2', participants: ['a2', 'b2'] },
+    ];
+    const clubs = new Map([
+      ['a1', 'alpha'],
+      ['a2', 'alpha'],
+      ['b1', 'beta'],
+      ['b2', 'beta'],
+    ]);
+
+    expect(findClubCollisions(groups, clubs)).toEqual([]);
+
+    const swapped = [
+      { label: 'гр. 1', participants: ['a1', 'a2'] },
+      { label: 'гр. 2', participants: ['b1', 'b2'] },
+    ];
+
+    expect(findClubCollisions(swapped, clubs)).toEqual([
+      { club: 'alpha', group: 'гр. 1', participants: ['a1', 'a2'] },
+      { club: 'beta', group: 'гр. 2', participants: ['b1', 'b2'] },
+    ]);
   });
 });

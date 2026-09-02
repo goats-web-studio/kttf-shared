@@ -43,6 +43,11 @@ export const ERROR_CODES = {
   DOWNSTREAM_MATCH_PLAYED: 'DOWNSTREAM_MATCH_PLAYED',
   /** Решение судьи не соответствует ни одному неразрешённому равенству. */
   TIE_DECISION_INVALID: 'TIE_DECISION_INVALID',
+  /**
+   * Игрока нет в расстановке: он не участвует в жеребьёвке или снят.
+   * Меняться местами такому не с кем — ТЗ 5.3.
+   */
+  DRAW_POSITION_NOT_FOUND: 'DRAW_POSITION_NOT_FOUND',
 
   // ---------- завершение турнира: ТС 7.5 ----------
 

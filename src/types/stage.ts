@@ -100,3 +100,21 @@ export const drawResultSchema = z.object({
   clubCollisions: z.array(clubCollisionSchema),
 });
 export type DrawResult = z.infer<typeof drawResultSchema>;
+
+/**
+ * Ручная корректировка жеребьёвки — ТЗ 5.3.
+ *
+ * Обмен двумя игроками, а не полная расстановка. Размеры групп и сетки при
+ * обмене не ломаются по построению: структура остаётся той, которую построил
+ * движок, и сверять её со схемой заново не нужно. Перестановка в свободный
+ * слот сетки выражается тем же обменом — с тем, кто этот проход занимает.
+ */
+export const drawSwapSchema = z
+  .object({
+    playerAId: z.uuid(),
+    playerBId: z.uuid(),
+  })
+  .refine((value) => value.playerAId !== value.playerBId, {
+    message: 'Игрока нельзя поменять местами с самим собой',
+  });
+export type DrawSwapInput = z.infer<typeof drawSwapSchema>;

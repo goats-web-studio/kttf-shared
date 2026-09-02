@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { bracketSourceSchema, drawResultSchema, matchViewSchema } from './stage.js';
+import { bracketSourceSchema, drawResultSchema, drawSwapSchema, matchViewSchema } from './stage.js';
 
 const ID = '00000000-0000-4000-8000-000000000001';
+const OTHER_ID = '00000000-0000-4000-8000-000000000002';
 const OTHER = '00000000-0000-4000-8000-000000000002';
 
 const match = {
@@ -73,5 +74,14 @@ describe('результат жеребьёвки', () => {
       drawResultSchema.safeParse({ tournamentId: ID, stages: [], clubCollisions: [] }).success,
     ).toBe(true);
     expect(drawResultSchema.safeParse({ tournamentId: ID, stages: [] }).success).toBe(false);
+  });
+});
+
+describe('ручная корректировка жеребьёвки', () => {
+  it('обмен требует двух разных игроков', () => {
+    // Обмен с самим собой — не корректировка, а опечатка организатора.
+    expect(drawSwapSchema.safeParse({ playerAId: ID, playerBId: OTHER_ID }).success).toBe(true);
+    expect(drawSwapSchema.safeParse({ playerAId: ID, playerBId: ID }).success).toBe(false);
+    expect(drawSwapSchema.safeParse({ playerAId: ID }).success).toBe(false);
   });
 });

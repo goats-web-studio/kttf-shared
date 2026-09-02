@@ -102,7 +102,7 @@ export function splitIntoGroups(
     participants: participantsInGroup,
   }));
 
-  return { groups, clubCollisions: findCollisions(groups, clubOf) };
+  return { groups, clubCollisions: findClubCollisions(groups, clubOf) };
 }
 
 /**
@@ -151,7 +151,14 @@ function resolveGroupCount(total: number, options: GroupSplitOptions): number {
   throw new Error('splitIntoGroups: не задано ни groupCount, ни groupSize');
 }
 
-function findCollisions(
+/**
+ * Игроки одного клуба, оказавшиеся в одной группе.
+ *
+ * Экспортируется, потому что состав групп меняет не только жеребьёвка:
+ * после ручной перестановки (ТЗ 5.3) совпадения нужно пересчитать, а второе
+ * их описание разошлось бы с этим — запрет №2 брифа.
+ */
+export function findClubCollisions(
   groups: readonly Group[],
   clubOf: ReadonlyMap<ParticipantId, string | undefined>,
 ): ClubCollision[] {
