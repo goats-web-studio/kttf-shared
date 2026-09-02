@@ -48,7 +48,7 @@ _Архитектура, стек, модель данных, контракты
 | Стили                | Tailwind CSS 4                |
 | Компоненты           | shadcn/ui                     |
 | Формы                | React Hook Form + Zod         |
-| Графики              | Recharts                      |
+| Графики              | Собственный SVG (ADR-028)     |
 | Локальное хранилище  | Dexie (IndexedDB)             |
 | PWA                  | vite-plugin-pwa (Workbox)     |
 | Локализация          | Собственный словарь (ADR-016) |
