@@ -493,12 +493,18 @@ enum AnomalyStatus { OPEN REVIEWING CONFIRMED DISMISSED }
 ```typescript
 type FormatConfig =
   | { type: 'ROUND_ROBIN'; rounds: 1 | 2; setsToWin: 2 | 3 | 4 }
+  // consolation описан, но схема принимает только false: движка утешительной
+  // сетки нет, а собирать её в приложении запрещает запрет №2 брифа.
+  // Отказ стоит при создании турнира, а не при жеребьёвке — ADR-024.
   | { type: 'KNOCKOUT'; setsToWin: 2 | 3 | 4; thirdPlace: boolean; consolation: boolean }
   | {
       type: 'GROUPS_KNOCKOUT';
       groupCount?: number;
       groupSize?: number;
       advancePerGroup: number;
+      // Кругов в группе. Необязателен при записи, по умолчанию один:
+      // турниры, созданные до появления поля, читаются дальше.
+      groupRounds: 1 | 2;
       groupSetsToWin: 2 | 3 | 4;
       koSetsToWin: 2 | 3 | 4;
       thirdPlace: boolean;
@@ -508,6 +514,8 @@ type FormatConfig =
       groupCount?: number;
       groupSize?: number;
       advancePerGroup: number;
+      // Одно поле на оба этапа, как и setsToWin у этой схемы.
+      groupRounds: 1 | 2;
       // Финалы по местам: k-я группа — занявшие k-е место в своей группе.
       // Поэтому finalGroupCount === advancePerGroup, это проверяет схема.
       finalGroupCount: number;
