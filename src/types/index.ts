@@ -7,5 +7,6 @@ export * from './results.js';
 export * from './screen.js';
 export * from './stage.js';
 export * from './standings.js';
+export * from './sync.js';
 export * from './tournament.js';
 export * from './tournament-format.js';
