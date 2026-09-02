@@ -869,9 +869,13 @@ type MatchUpdateResult = {
 ### 7.7. Публичный экран
 
 ```
-GET    /api/v1/public/screen/:publicToken       # без авторизации
-WS     /ws/screen/:publicToken                  # realtime-обновления
+GET    /api/v1/public/screen/:publicToken           # без авторизации
+GET    /api/v1/public/screen/:publicToken/stream    # поток SSE, без авторизации
 ```
+
+Поток отдаёт события `state` — состояние экрана целиком, тем же телом, что и первый маршрут, — и `ping` каждые 25 секунд, чтобы посредники не закрывали молчащее соединение.
+
+Вебсокета здесь нет: поток односторонний, экран зала ничего не отправляет. Обоснование и отменённый вариант `WS /ws/screen/:publicToken` — ADR-025.
 
 ### 7.8. Ответы об ошибках
 

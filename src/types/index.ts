@@ -4,6 +4,7 @@ export * from './match.js';
 export * from './pagination.js';
 export * from './player.js';
 export * from './results.js';
+export * from './screen.js';
 export * from './stage.js';
 export * from './standings.js';
 export * from './tournament.js';
