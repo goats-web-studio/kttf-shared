@@ -3,6 +3,7 @@ export * from './club.js';
 export * from './match.js';
 export * from './pagination.js';
 export * from './player.js';
+export * from './player-history.js';
 export * from './results.js';
 export * from './screen.js';
 export * from './stage.js';
