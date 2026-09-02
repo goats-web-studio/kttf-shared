@@ -837,6 +837,7 @@ POST   /api/v1/tournaments/:id/publish
 POST   /api/v1/tournaments/:id/open-registration
 POST   /api/v1/tournaments/:id/close-registration
 POST   /api/v1/tournaments/:id/draw           # жеребьёвка
+POST   /api/v1/tournaments/:id/draw/swap      # обмен двумя игроками, ТЗ 5.3 (ADR-033)
 POST   /api/v1/tournaments/:id/start
 POST   /api/v1/tournaments/:id/finish
 POST   /api/v1/tournaments/:id/cancel
