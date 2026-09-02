@@ -21,12 +21,25 @@ const roundRobin = z.object({
   setsToWin,
 });
 
-const knockout = z.object({
-  type: z.literal('KNOCKOUT'),
-  setsToWin,
-  thirdPlace: z.boolean(),
-  consolation: z.boolean(),
-});
+/**
+ * Утешительная сетка (ТЗ 5.1) описана, но не построена: движка для неё нет,
+ * а собирать сетку в приложении запрещено запретом №2 брифа.
+ *
+ * Отказ стоит здесь, а не в жеребьёвке. Иначе турнир создаётся, живёт со
+ * своим флагом и разваливается только при разложении сетки — организатор
+ * узнаёт об отказе через три экрана после того, как сделал выбор (ADR-024).
+ */
+const knockout = z
+  .object({
+    type: z.literal('KNOCKOUT'),
+    setsToWin,
+    thirdPlace: z.boolean(),
+    consolation: z.boolean(),
+  })
+  .refine((value) => !value.consolation, {
+    message: 'Утешительная сетка пока не поддерживается: движок её не строит',
+    path: ['consolation'],
+  });
 
 /**
  * Групповой этап задаётся либо числом групп, либо размером группы — ТЗ 5.2.
@@ -36,6 +49,14 @@ const groupSizing = {
   groupCount: z.number().int().min(2).max(64).optional(),
   groupSize: z.number().int().min(2).max(64).optional(),
   advancePerGroup: z.number().int().positive().max(16),
+  /**
+   * Кругов в группе — ТЗ 5.2, тот же параметр, что у круговой схемы.
+   *
+   * Со значением по умолчанию, а не обязательный: турниры, созданные до
+   * появления поля, лежат в базе без него и обязаны читаться дальше. Один
+   * круг — то, как они и разыгрывались.
+   */
+  groupRounds: z.union([z.literal(1), z.literal(2)]).default(1),
 };
 
 function exactlyOneSizing(value: {

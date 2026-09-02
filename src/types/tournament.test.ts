@@ -90,7 +90,42 @@ describe('схема проведения', () => {
     ).toBe(false);
   });
 
-  it('олимпийка знает про утешительную и матч за третье место', () => {
+  it('кругов в группе один или два, по умолчанию один', () => {
+    // ТЗ 5.2: тот же параметр, что у круговой схемы. До этого у групп его
+    // не было вовсе, и второй круг задать было нечем.
+    const base = {
+      type: 'GROUPS_KNOCKOUT',
+      groupCount: 4,
+      advancePerGroup: 2,
+      groupSetsToWin: 3,
+      koSetsToWin: 3,
+      thirdPlace: true,
+    };
+
+    expect(formatConfigSchema.safeParse({ ...base, groupRounds: 2 }).success).toBe(true);
+    expect(formatConfigSchema.safeParse({ ...base, groupRounds: 3 }).success).toBe(false);
+
+    // Турнир, созданный до появления поля, лежит в базе без него и обязан
+    // читаться дальше — ровно так, как он и разыгрывался.
+    const parsed = formatConfigSchema.parse(base);
+
+    expect(parsed).toMatchObject({ groupRounds: 1 });
+  });
+
+  it('то же поле есть у финальных групп', () => {
+    const base = {
+      type: 'GROUPS_FINAL_GROUPS',
+      groupCount: 4,
+      advancePerGroup: 2,
+      finalGroupCount: 2,
+      setsToWin: 3,
+    };
+
+    expect(formatConfigSchema.safeParse({ ...base, groupRounds: 2 }).success).toBe(true);
+    expect(formatConfigSchema.parse(base)).toMatchObject({ groupRounds: 1 });
+  });
+
+  it('олимпийка знает про матч за третье место', () => {
     expect(
       formatConfigSchema.safeParse({
         type: 'KNOCKOUT',
@@ -99,6 +134,19 @@ describe('схема проведения', () => {
         consolation: false,
       }).success,
     ).toBe(true);
+  });
+
+  it('утешительная сетка отвергается при создании, а не при жеребьёвке', () => {
+    // Движок её не строит. Турнир с этим флагом создавался и разваливался
+    // только при разложении сетки — через три экрана после выбора (ADR-024).
+    expect(
+      formatConfigSchema.safeParse({
+        type: 'KNOCKOUT',
+        setsToWin: 3,
+        thirdPlace: false,
+        consolation: true,
+      }).success,
+    ).toBe(false);
   });
 
   it('неизвестная схема не проходит', () => {
