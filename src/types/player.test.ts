@@ -116,6 +116,26 @@ describe('изменение игрока', () => {
   it('одного поля достаточно', () => {
     expect(updatePlayerSchema.safeParse({ city: 'Астана' }).success).toBe(true);
   });
+
+  it('null очищает необязательное поле', () => {
+    // Иначе однажды вписанный инвентарь остаётся в анкете навсегда.
+    expect(updatePlayerSchema.safeParse({ blade: null }).success).toBe(true);
+    expect(updatePlayerSchema.safeParse({ coachPlayerId: null }).success).toBe(true);
+    expect(updatePlayerSchema.safeParse({ birthDate: null }).success).toBe(true);
+  });
+
+  it('обязательное поле очистить нельзя', () => {
+    expect(updatePlayerSchema.safeParse({ city: null }).success).toBe(false);
+    expect(updatePlayerSchema.safeParse({ lastName: null }).success).toBe(false);
+  });
+
+  it('очистка одного способа задать тренера не спорит с другим', () => {
+    // Переключение «из списка» → «вписать руками» приходит именно так:
+    // связь очищается, имя задаётся.
+    expect(
+      updatePlayerSchema.safeParse({ coachPlayerId: null, coachName: 'Сериков Тимур' }).success,
+    ).toBe(true);
+  });
 });
 
 describe('игрок в ответе', () => {

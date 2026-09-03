@@ -74,10 +74,10 @@ const photo = z.union([
  * в категорию, а по допуску нет.
  */
 function agreeOnBirth(
-  value: { birthYear?: number | undefined; birthDate?: string | undefined },
+  value: { birthYear?: number | undefined; birthDate?: string | null | undefined },
   ctx: z.RefinementCtx,
 ): void {
-  if (value.birthDate === undefined) {
+  if (value.birthDate === undefined || value.birthDate === null) {
     return;
   }
 
@@ -107,10 +107,18 @@ function agreeOnBirth(
  * и рано или поздно они разойдутся.
  */
 function coachIsSingle(
-  value: { coachPlayerId?: string | undefined; coachName?: string | undefined },
+  value: {
+    coachPlayerId?: string | null | undefined;
+    coachName?: string | null | undefined;
+  },
   ctx: z.RefinementCtx,
 ): void {
-  if (value.coachPlayerId !== undefined && value.coachName !== undefined) {
+  if (
+    value.coachPlayerId !== undefined &&
+    value.coachPlayerId !== null &&
+    value.coachName !== undefined &&
+    value.coachName !== null
+  ) {
     ctx.addIssue({
       code: 'custom',
       path: ['coachName'],
@@ -150,8 +158,30 @@ export const createPlayerSchema = z.object(profile).superRefine((value, ctx) => 
 });
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
 
+/**
+ * Правка профиля: `null` очищает поле, отсутствие поля его не трогает.
+ *
+ * Без `null` однажды заполненное поле нельзя стереть вовсе: PATCH, который
+ * умеет только заполнять, оставляет человека с чужим инвентарём в анкете
+ * навсегда. Обязательные поля очищать нельзя — их и нет в этом списке.
+ */
+const clearable = {
+  middleName: profile.middleName.nullable(),
+  birthDate: profile.birthDate.nullable(),
+  photoUrl: profile.photoUrl.nullable(),
+  clubId: profile.clubId.nullable(),
+  playingHand: profile.playingHand.nullable(),
+  grip: profile.grip.nullable(),
+  blade: profile.blade.nullable(),
+  rubberForehand: profile.rubberForehand.nullable(),
+  rubberBackhand: profile.rubberBackhand.nullable(),
+  bio: profile.bio.nullable(),
+  coachPlayerId: profile.coachPlayerId.nullable(),
+  coachName: profile.coachName.nullable(),
+};
+
 export const updatePlayerSchema = z
-  .object(profile)
+  .object({ ...profile, ...clearable })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { message: 'Нужно указать хотя бы одно поле' })
   .superRefine((value, ctx) => {
