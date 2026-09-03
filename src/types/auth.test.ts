@@ -8,6 +8,7 @@ const USER = {
   login: 'aslan',
   email: null,
   locale: 'ru',
+  telegramId: null,
   createdAt: '2026-08-30T00:00:00.000Z',
   playerId: null,
   clubRoles: [{ clubId: '00000000-0000-4000-8000-000000000002', role: 'OWNER' }],

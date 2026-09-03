@@ -105,6 +105,8 @@ export const authUserViewSchema = z.object({
   login: z.string().nullable(),
   email: z.email().nullable(),
   locale: z.string(),
+  /** Числовой Telegram ID для будущих уведомлений (ТЗ 10, V2). `null` — не указан. */
+  telegramId: z.string().nullable(),
   createdAt: z.iso.datetime(),
   /** `null`, пока профиль игрока не заведён — ТЗ 2.2 заполняется отдельно. */
   playerId: z.uuid().nullable(),
