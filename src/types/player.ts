@@ -135,6 +135,15 @@ const profile = {
   birthYear: z.number().int().min(1900).max(currentYear),
   /** Полная дата рождения. Необязательна — см. `agreeOnBirth`. */
   birthDate: z.iso.date().optional(),
+  /**
+   * Показывать посторонним только год рождения — ADR-037.
+   *
+   * Хранится ровно так, как звучит галочка в форме: без отрицания, которое
+   * рано или поздно прочитают наоборот. Умолчание — `true`: до появления
+   * полной даты профиль показывал только год, и включение галочки по
+   * умолчанию не меняет того, что о человеке видно.
+   */
+  birthYearOnly: z.boolean().optional(),
   gender: genderSchema,
   city: z.string().trim().min(1).max(100),
   photoUrl: photo.optional(),
@@ -256,8 +265,17 @@ export type PlayerView = z.infer<typeof playerViewSchema>;
  * действительно показывают. Списки и снимки обходятся кратким видом.
  */
 export const playerProfileViewSchema = playerViewSchema.extend({
-  /** `YYYY-MM-DD` либо `null`: полная дата рождения необязательна. */
+  /**
+   * `YYYY-MM-DD` либо `null`.
+   *
+   * `null` означает и «дата не указана», и «показывать её посторонним
+   * запрещено»: постороннему эти два случая обязаны выглядеть одинаково.
+   * Различить их вправе только сам игрок и организатор его клуба — им
+   * сервер отдаёт дату как есть.
+   */
   birthDate: z.string().nullable(),
+  /** Дата скрыта от посторонних. Сама дата при этом в ответ не попадает. */
+  birthYearOnly: z.boolean(),
   playingHand: z.string().nullable(),
   grip: z.string().nullable(),
   blade: z.string().nullable(),

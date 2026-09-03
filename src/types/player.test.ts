@@ -197,8 +197,23 @@ describe('игрок в ответе', () => {
       bio: 'hate tensor, love sticky',
       coachPlayerId: null,
       coachName: 'Сериков Тимур',
+      birthYearOnly: true,
     };
 
     expect(playerProfileViewSchema.parse(player)).toEqual(player);
+  });
+});
+
+describe('приватность даты рождения', () => {
+  it('галочка называется так же, как хранится: без отрицания', () => {
+    // «Показывать только год» = true. Обратное поле рано или поздно
+    // прочитают наоборот, и дата уедет наружу у того, кто её прятал.
+    expect(createPlayerSchema.safeParse({ ...valid, birthYearOnly: true }).success).toBe(true);
+    expect(createPlayerSchema.safeParse({ ...valid, birthYearOnly: false }).success).toBe(true);
+  });
+
+  it('в кратком виде даты нет вовсе, прятать нечего', () => {
+    expect(playerViewSchema.shape).not.toHaveProperty('birthDate');
+    expect(playerViewSchema.shape).not.toHaveProperty('birthYearOnly');
   });
 });
