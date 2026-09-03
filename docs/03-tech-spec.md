@@ -46,12 +46,14 @@ _Архитектура, стек, модель данных, контракты
 | Серверное состояние  | TanStack Query                |
 | Клиентское состояние | Zustand                       |
 | Стили                | Tailwind CSS 4                |
-| Компоненты           | shadcn/ui                     |
+| Компоненты           | shadcn/ui — решено, ещё не заведено |
 | Формы                | React Hook Form + Zod         |
 | Графики              | Собственный SVG (ADR-028)     |
 | Локальное хранилище  | Dexie (IndexedDB)             |
 | PWA                  | vite-plugin-pwa (Workbox)     |
 | Локализация          | Собственный словарь (ADR-016) |
+| Дизайн-система       | Токены в `styles.css` (ADR-038, `07-design-system.md`) |
+| Гарнитуры            | Oswald и Inter, свои файлы через fontsource |
 
 ### 2.3. Мобильное
 
