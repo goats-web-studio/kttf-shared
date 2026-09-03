@@ -47,7 +47,11 @@ describe('ADR-001 — три репозитория, приложения раз
   it.skipIf(!HAS_SIBLINGS)('в общей директории нет ничего, кроме репозиториев', () => {
     // Требование владельца продукта: верхний уровень — только проекты.
     // Всё общее, включая документацию и конфигурацию, живёт в kttf-shared.
-    const allowed = new Set(['kttf-back', 'kttf-front', 'kttf-shared', 'kttf-infra']);
+    // CLAUDE.md — единственное исключение, и оно вынужденное: агент читает
+    // его из рабочей директории, а работа идёт по всем четырём репозиториям
+    // сразу. Уехав в kttf-shared, правила перестанут действовать в kttf-back
+    // и kttf-front — то есть ровно там, где пишется код.
+    const allowed = new Set(['kttf-back', 'kttf-front', 'kttf-shared', 'kttf-infra', 'CLAUDE.md']);
     const unexpected = listWorkspace().filter((entry) => !allowed.has(entry));
     expect(
       unexpected,
