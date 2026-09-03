@@ -204,6 +204,7 @@ model Player {
   middleName     String?                   // необязательно
   birthYear      Int                       // источник истины для допуска
   birthDate      DateTime? @db.Date        // необязательна, обязана совпадать с годом
+  birthYearOnly  Boolean  @default(true)   // показывать посторонним только год (ADR-037)
   gender         Gender
   city           String
   photoUrl       String?
@@ -827,6 +828,8 @@ GET    /api/v1/players/:id/matches          ?page&limit
 GET    /api/v1/players/:id/head-to-head/:opponentId
 POST   /api/v1/players                      # создание организатором
 ```
+
+**Полную дату рождения видят сам игрок и организаторы его клуба** — ADR-037. Остальным она не приходит вовсе: маршрут берёт токен необязательным, а скрытая дата неотличима от незаполненной.
 
 **Два вида игрока в ответах.** Списки, состав турнира, история встреч и снимок консоли несут краткий вид без анкеты; `GET /players/:id`, `POST /players` и `PATCH /players/:id` отдают полный профиль вместе с анкетой ТЗ 2.2. Обоснование — ADR-035: анкета каждого участника раздула бы офлайн-снимок судьи.
 
