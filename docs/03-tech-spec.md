@@ -79,12 +79,13 @@ _Архитектура, стек, модель данных, контракты
 
 ### 2.5. Внешние сервисы
 
-| Задача   | Сервис                                    |
-| -------- | ----------------------------------------- |
-| SMS-коды | Локальный провайдер РК (Mobizon, SMSC.kz) |
-| Платежи  | Kaspi Business API, резерв — ePay Halyk   |
-| Push     | Web Push (VAPID), позже FCM               |
-| Карты    | 2GIS API                                  |
+| Задача  | Сервис                                  |
+| ------- | --------------------------------------- |
+| Платежи | Kaspi Business API, резерв — ePay Halyk |
+| Push    | Web Push (VAPID), позже FCM             |
+| Карты   | 2GIS API                                |
+
+**SMS-провайдера в списке больше нет.** Вход переведён на логин и пароль 03.09.2026, одноразовый код удалён целиком — ADR-034, ОВ-9.
 
 ### 2.6. Инструменты разработки
 
@@ -176,9 +177,12 @@ kttf/                           ← просто общая папка, не п�
 model User {
   id            String   @id @default(uuid())
   phone         String   @unique          // E.164, +7XXXXXXXXXX
+  login         String?  @unique          // второй способ войти (ADR-034)
+  passwordHash  String?                   // scrypt с солью на пользователя
   phoneVerified Boolean  @default(false)
   email         String?  @unique
   locale        Locale   @default(RU)
+  telegramId    String?                   // числовой chat_id, под уведомления
   createdAt     DateTime @default(now())
 
   player        Player?
@@ -198,12 +202,27 @@ model Player {
   lastName       String
   firstName      String
   middleName     String?                   // необязательно
-  birthYear      Int
+  birthYear      Int                       // источник истины для допуска
+  birthDate      DateTime? @db.Date        // необязательна, обязана совпадать с годом
   gender         Gender
   city           String
   photoUrl       String?
   clubId         String?
   club           Club?    @relation(fields: [clubId], references: [id])
+
+  // Анкета ТЗ 2.2 (ADR-035). Инвентарь строкой, а не справочником
+  playingHand    PlayingHand?
+  grip           Grip?
+  blade          String?
+  rubberForehand String?
+  rubberBackhand String?
+  bio            String?
+
+  // Тренер: связь либо строка, но не оба сразу
+  coachPlayerId  String?
+  coach          Player?  @relation("PlayerCoach", fields: [coachPlayerId], references: [id])
+  students       Player[] @relation("PlayerCoach")
+  coachName      String?
 
   // Проекция рейтинга (материализованная, источник истины — RatingEvent)
   rating         Decimal  @default(250) @db.Decimal(8,2)
@@ -217,9 +236,12 @@ model Player {
   @@index([rating(sort: Desc)])
   @@index([city, rating(sort: Desc)])
   @@index([lastName, firstName])
+  @@index([coachPlayerId])              // список тренеров — выборка по ссылке
 }
 
 enum Gender { MALE FEMALE }
+enum PlayingHand { RIGHT LEFT }
+enum Grip { SHAKEHAND PENHOLD }           // европейский и азиатский («перо»)
 
 // ============ Клубы ============
 
@@ -788,12 +810,16 @@ POST   /api/v1/auth/sign-up          { login, password, phone, playerId? } → �
 POST   /api/v1/auth/refresh          { refreshToken }
 POST   /api/v1/auth/logout
 GET    /api/v1/auth/me
+PATCH  /api/v1/auth/me               { login?, email?, locale?, telegramId? } → user
+POST   /api/v1/auth/change-password  { currentPassword, newPassword } → { accessToken, refreshToken }
 ```
+
+**Настройки аккаунта отделены от профиля игрока** — ADR-035. `null` в поле `PATCH /auth/me` очищает его, отсутствие поля не трогает. Смена пароля обрывает остальные сессии и выдаёт новую пару токенов взамен. Телефон не меняется ни тем, ни другим: подтверждать владение новым номером нечем (ADR-034).
 
 ### 7.2. Игроки
 
 ```
-GET    /api/v1/players               ?search&city&clubId&withoutAccount&page&limit
+GET    /api/v1/players               ?search&city&clubId&withoutAccount&coachesOnly&page&limit
 GET    /api/v1/players/:id
 PATCH  /api/v1/players/:id
 GET    /api/v1/players/:id/rating-history   ?from&to
@@ -801,6 +827,10 @@ GET    /api/v1/players/:id/matches          ?page&limit
 GET    /api/v1/players/:id/head-to-head/:opponentId
 POST   /api/v1/players                      # создание организатором
 ```
+
+**Два вида игрока в ответах.** Списки, состав турнира, история встреч и снимок консоли несут краткий вид без анкеты; `GET /players/:id`, `POST /players` и `PATCH /players/:id` отдают полный профиль вместе с анкетой ТЗ 2.2. Обоснование — ADR-035: анкета каждого участника раздула бы офлайн-снимок судьи.
+
+`null` в поле `PATCH /players/:id` очищает его, отсутствие поля не трогает. Обязательные поля очистить нельзя.
 
 ### 7.3. Рейтинги
 
@@ -914,6 +944,19 @@ GET    /api/v1/public/screen/:publicToken/stream    # поток SSE, без а�
 
 Коды ошибок — строковые константы из `kttf-shared`, локализуются на клиенте.
 
+### 7.9. Файлы
+
+```
+POST   /api/v1/files/player-photo    multipart, поле file → { url }
+GET    /api/v1/files/:folder/:name
+```
+
+Загрузка под входом, чтение открыто: фото игрока видно на публичной странице. Файл идёт **через API**, а не предподписанной ссылкой в MinIO — ADR-036: подпись S3 несёт в себе имя хоста, а у хранилища оно внутри сети и снаружи разное.
+
+Принимаются JPEG, PNG и WebP до 5 МБ. Правило одно на форму и на сервер — функция `rejectPhoto` в общем коде, по образцу допуска на турнир (ADR-029). Ключ файла — папка, UUID и расширение по типу содержимого: имя файла от клиента в него не попадает.
+
+Логотип клуба и фото зала (ТЗ 3.1) этим маршрутом пока не закрыты.
+
 ---
 
 ## 8. Нефункциональные требования
@@ -944,8 +987,8 @@ GET    /api/v1/public/screen/:publicToken/stream    # поток SSE, без а�
 ### 8.3. Безопасность
 
 - Все соединения по HTTPS, TLS 1.3
-- Пароли отсутствуют как класс, коды по SMS живут 5 минут
-- Rate limiting: 5 запросов кода на телефон в час, 100 запросов API в минуту на пользователя
+- Пароль хранится как `scrypt` с солью на пользователя (ADR-034). Смена пароля требует текущего и обрывает остальные сессии (ADR-035)
+- Rate limiting: 100 запросов API в минуту на пользователя и отдельный, более строгий предел на `/auth/login`. **Не сделано** — 05-state.md, долг по бэкенду. Прежнее ограничение «5 кодов в час» ушло вместе с одноразовым кодом (ADR-034), и вход сейчас перебирается ничем не ограниченно
 - Ролевая модель проверяется на уровне guard'ов, не на уровне интерфейса
 - Персональные данные шифруются at rest средствами БД
 - Журнал действий: все изменения рейтинга, финансовые операции, изменения результатов
@@ -973,7 +1016,7 @@ GET    /api/v1/public/screen/:publicToken/stream    # поток SSE, без а�
 - Монорепозиторий, линтеры, форматтер, CI
 - Схема Prisma, первые миграции
 - Docker Compose для локальной разработки
-- Аутентификация по SMS
+- Аутентификация: вход по логину и паролю (ADR-034)
 - Базовый деплой на staging
 
 ### Спринт 1 — движки
