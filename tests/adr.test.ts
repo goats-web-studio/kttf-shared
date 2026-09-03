@@ -176,6 +176,8 @@ describe('документация — источник истины', () => {
       '04-agent-brief.md',
       '05-state.md',
       '06-decisions.md',
+      '07-design-system.md',
+      '08-ux-draft.md',
     ]) {
       expect(inProject('docs', file), `docs/${file} отсутствует`).toBe(true);
     }
