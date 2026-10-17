@@ -301,6 +301,7 @@ model Tournament {
   maxParticipants Int?
   ratingCapMax    Decimal? @db.Decimal(8,2)
   ratingCapMin    Decimal? @db.Decimal(8,2)
+  reviewOutOfRating Boolean @default(false) // заявки вне планки — ADR-044
   birthYearFrom   Int?
   birthYearTo     Int?
   genderLimit     Gender?
@@ -353,7 +354,8 @@ model Registration {
 }
 
 enum RegistrationStatus {
-  REGISTERED WAITLIST CONFIRMED PLAYING WITHDRAWN NO_SHOW
+  REGISTERED PENDING WAITLIST CONFIRMED PLAYING WITHDRAWN NO_SHOW REJECTED
+  // PENDING — заявка вне рейтинговой планки ждёт решения, REJECTED — отказ по ней (ADR-044)
 }
 
 // ============ Этапы и встречи ============
@@ -521,7 +523,13 @@ type FormatConfig =
   // consolation описан, но схема принимает только false: движка утешительной
   // сетки нет, а собирать её в приложении запрещает запрет №2 брифа.
   // Отказ стоит при создании турнира, а не при жеребьёвке — ADR-024.
-  | { type: 'KNOCKOUT'; setsToWin: 2 | 3 | 4; thirdPlace: boolean; consolation: boolean }
+  | {
+      type: 'KNOCKOUT';
+      setsToWin: 2 | 3 | 4;
+      playoffSetsToWin?: PlayoffSetsToWin;
+      thirdPlace: boolean;
+      consolation: boolean;
+    }
   | {
       type: 'GROUPS_KNOCKOUT';
       groupCount?: number;
@@ -532,6 +540,7 @@ type FormatConfig =
       groupRounds: 1 | 2;
       groupSetsToWin: 2 | 3 | 4;
       koSetsToWin: 2 | 3 | 4;
+      playoffSetsToWin?: PlayoffSetsToWin;
       thirdPlace: boolean;
     }
   | {
@@ -546,6 +555,16 @@ type FormatConfig =
       finalGroupCount: number;
       setsToWin: 2 | 3 | 4;
     };
+
+// Длина встреч по кругам плей-офф — ADR-044. Всё необязательно: не заданный
+// круг играется общей длиной плей-офф. Какой встрече какая длина — правило
+// playoffSetsToWin в brackets, по кругу и позиции встречи.
+type PlayoffSetsToWin = Partial<
+  Record<
+    'final' | 'thirdPlace' | 'semifinal' | 'quarterfinal' | 'roundOf16' | 'roundOf32' | 'roundOf64',
+    2 | 3 | 4
+  >
+>;
 
 type SeedingConfig = {
   method: 'RATING' | 'RANDOM' | 'MANUAL';
