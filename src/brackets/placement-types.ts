@@ -15,10 +15,7 @@ import type { ParticipantId, Standings, TieGroup } from './types.js';
  * литералом: движок не имеет права зависеть от Zod-схем (бриф 3.3).
  */
 export type PlacementScheme =
-  | 'ROUND_ROBIN'
-  | 'KNOCKOUT'
-  | 'GROUPS_KNOCKOUT'
-  | 'GROUPS_FINAL_GROUPS';
+  'ROUND_ROBIN' | 'KNOCKOUT' | 'GROUPS_KNOCKOUT' | 'GROUPS_FINAL_GROUPS';
 
 /**
  * Откуда взялось место — или почему его нет.
@@ -79,6 +76,11 @@ export interface PlacementInput {
   readonly finalGroups: readonly GroupTable[];
   /** Встречи олимпийской сетки. */
   readonly bracket: readonly BracketResult[];
+  /**
+   * Сетка за места для не вышедших из групп — ADR-045. Её места идут сразу
+   * за местами основной сетки. Нет сетки — не вышедшие остаются без места.
+   */
+  readonly exitBracket?: readonly BracketResult[];
 }
 
 /** Таблицы по возрастанию порядка: он задаёт и диапазоны мест финальных групп. */
@@ -89,7 +91,9 @@ export function byOrder(groups: readonly GroupTable[]): GroupTable[] {
 /** Все участники переданных таблиц, без повторов и в порядке появления. */
 export function participantsOfGroups(groups: readonly GroupTable[]): ParticipantId[] {
   return [
-    ...new Set(byOrder(groups).flatMap((group) => group.standings.rows.map((row) => row.participant))),
+    ...new Set(
+      byOrder(groups).flatMap((group) => group.standings.rows.map((row) => row.participant)),
+    ),
   ];
 }
 

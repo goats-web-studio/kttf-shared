@@ -240,6 +240,27 @@ describe('изменение турнира', () => {
   });
 });
 
+describe('сетка за места для не вышедших из групп — ADR-045', () => {
+  const groupsKnockout = {
+    type: 'GROUPS_KNOCKOUT',
+    groupCount: 4,
+    advancePerGroup: 2,
+    groupSetsToWin: 2,
+    koSetsToWin: 3,
+    thirdPlace: true,
+  };
+
+  it('турнир без поля читается как раньше — без сетки за места', () => {
+    expect(formatConfigSchema.parse(groupsKnockout)).toMatchObject({ exitBracket: false });
+  });
+
+  it('включается флагом', () => {
+    expect(formatConfigSchema.parse({ ...groupsKnockout, exitBracket: true })).toMatchObject({
+      exitBracket: true,
+    });
+  });
+});
+
 describe('длина встреч по кругам плей-офф', () => {
   const knockout = { type: 'KNOCKOUT', setsToWin: 3, thirdPlace: true, consolation: false };
 

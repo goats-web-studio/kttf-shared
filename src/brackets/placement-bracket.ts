@@ -46,12 +46,36 @@ export function groupsBracketPlacement(input: PlacementInput): Placement {
     return { rows: undecided(known), shared: [], unresolved: [] };
   }
 
-  const seen = new Set(placement.rows.map((row) => row.participant));
+  // Сетка за места разыгрывает места сразу за основной: при восьми в
+  // основной её победитель — девятый. Пока основная не доиграна, сдвиг
+  // неизвестен, и сюда расчёт не доходит — выход выше.
+  const exit = shifted(fromBracket(input.exitBracket ?? []), placement.rows.length);
+  const played = {
+    ...placement,
+    rows: [...placement.rows, ...exit.rows],
+    shared: [...placement.shared, ...exit.shared],
+  };
+
+  const seen = new Set(played.rows.map((row) => row.participant));
   const exits = fromGroups
     .filter((participant) => !seen.has(participant))
     .map((participant): PlacementRow => ({ participant, place: null, reason: 'GROUP_EXIT' }));
 
-  return { ...placement, rows: [...placement.rows, ...exits] };
+  return { ...played, rows: [...played.rows, ...exits] };
+}
+
+/** Места сетки, сдвинутые на занятые выше неё. */
+function shifted(placement: Placement, offset: number): Placement {
+  return {
+    rows: placement.rows.map((row) =>
+      row.place === null ? row : { ...row, place: row.place + offset },
+    ),
+    shared: placement.shared.map((tie) => ({
+      ...tie,
+      places: tie.places.map((place) => place + offset),
+    })),
+    unresolved: placement.unresolved,
+  };
 }
 
 /**

@@ -23,11 +23,7 @@ export type {
 } from './advancement.js';
 export { resolveBracketSlots } from './advancement.js';
 
-export type {
-  AdvancingSelection,
-  GroupPlacement,
-  GroupPlacementRow,
-} from './group-advance.js';
+export type { AdvancingSelection, GroupPlacement, GroupPlacementRow } from './group-advance.js';
 export { selectAdvancing } from './group-advance.js';
 
 export type { MatchResultInput, ResultProblem } from './result.js';

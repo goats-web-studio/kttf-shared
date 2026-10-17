@@ -93,6 +93,13 @@ const groupsKnockout = z
     koSetsToWin: setsToWin,
     playoffSetsToWin: playoffSetsToWinSchema.optional(),
     thirdPlace: z.boolean(),
+    /**
+     * Не вышедшие из групп играют сетку за следующие места — ADR-045.
+     *
+     * Со значением по умолчанию: турниры, созданные до появления поля,
+     * читаются дальше и играются как раньше — без сетки за места.
+     */
+    exitBracket: z.boolean().default(false),
   })
   .refine(exactlyOneSizing, { message: SIZING_MESSAGE });
 

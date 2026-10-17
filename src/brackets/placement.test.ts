@@ -37,22 +37,19 @@ function third(winner: string | null, loser: string | null): BracketResult {
 }
 
 /** Места по участникам — так проверять читаемее, чем по порядку строк. */
-function places(rows: readonly { participant: string; place: number | null }[]): Record<string, number | null> {
+function places(
+  rows: readonly { participant: string; place: number | null }[],
+): Record<string, number | null> {
   return Object.fromEntries(rows.map((row) => [row.participant, row.place]));
 }
 
-function reasons(
-  rows: readonly { participant: string; reason: string }[],
-): Record<string, string> {
+function reasons(rows: readonly { participant: string; reason: string }[]): Record<string, string> {
   return Object.fromEntries(rows.map((row) => [row.participant, row.reason]));
 }
 
 describe('круговая', () => {
   it('места берутся из таблицы', () => {
-    const standings = table(
-      ['a', 'b', 'c'],
-      [win('a', 'b'), win('a', 'c'), win('b', 'c')],
-    );
+    const standings = table(['a', 'b', 'c'], [win('a', 'b'), win('a', 'c'), win('b', 'c')]);
 
     const placement = calculatePlacement('ROUND_ROBIN', input({ groups: [group(0, standings)] }));
 
@@ -111,7 +108,12 @@ describe('олимпийка', () => {
     );
 
     expect(places(placement.rows)).toEqual({ a: 1, b: 2, c: null, d: null });
-    expect(reasons(placement.rows)).toEqual({ a: 'BRACKET', b: 'BRACKET', c: 'SHARED', d: 'SHARED' });
+    expect(reasons(placement.rows)).toEqual({
+      a: 'BRACKET',
+      b: 'BRACKET',
+      c: 'SHARED',
+      d: 'SHARED',
+    });
     expect(placement.shared).toEqual([{ participants: ['c', 'd'], places: [3, 4] }]);
   });
 
@@ -294,6 +296,56 @@ describe('группы плюс сетка', () => {
     );
 
     expect(Object.keys(reasons(placement.rows)).sort()).toEqual(['a', 'b', 'c', 'd', 'z']);
+  });
+});
+
+describe('группы плюс сетка за места — ADR-045', () => {
+  const groups = [
+    group(0, table(['a', 'c', 'e'], [win('a', 'c'), win('a', 'e'), win('c', 'e')])),
+    group(1, table(['b', 'd', 'f'], [win('b', 'd'), win('b', 'f'), win('d', 'f')])),
+  ];
+
+  it('места сетки за места идут сразу за основной', () => {
+    // Основная — a, b, c, d (места 1–4); сетка за места — e и f (5–6).
+    const placement = calculatePlacement(
+      'GROUPS_KNOCKOUT',
+      input({
+        groups,
+        bracket: [main(1, 'a', 'd'), main(1, 'b', 'c'), main(2, 'a', 'b'), third('c', 'd')],
+        exitBracket: [main(1, 'f', 'e')],
+      }),
+    );
+
+    expect(places(placement.rows)).toEqual({ a: 1, b: 2, c: 3, d: 4, f: 5, e: 6 });
+  });
+
+  it('несыгранная сетка за места оставляет её участников неопределёнными', () => {
+    const placement = calculatePlacement(
+      'GROUPS_KNOCKOUT',
+      input({
+        groups,
+        bracket: [main(1, 'a', 'd'), main(1, 'b', 'c'), main(2, 'a', 'b'), third('c', 'd')],
+        exitBracket: [main(1, 'e', 'f'), main(2, null, null)],
+      }),
+    );
+
+    expect(reasons(placement.rows)).toMatchObject({ e: 'UNDECIDED', f: 'UNDECIDED' });
+  });
+
+  it('деление мест в сетке за места тоже сдвигается', () => {
+    // Восемь в сетке за места без встречи за третье: проигравшие полуфиналисты
+    // делят не 3–4, а места сразу за основной.
+    const placement = calculatePlacement(
+      'GROUPS_KNOCKOUT',
+      input({
+        groups: [],
+        bracket: [main(1, 'a', 'b')],
+        exitBracket: [main(1, 'c', 'd'), main(1, 'e', 'f'), main(2, 'c', 'e')],
+      }),
+    );
+
+    expect(places(placement.rows)).toMatchObject({ a: 1, b: 2, c: 3, e: 4 });
+    expect(placement.shared).toEqual([{ participants: ['d', 'f'], places: [5, 6] }]);
   });
 });
 

@@ -38,6 +38,14 @@ export interface AdvancingSelection {
   /** Вышедшие по местам: `byPlace[0]` — первые места в порядке групп. */
   readonly byPlace: readonly (readonly ParticipantId[])[];
   /**
+   * Не вышедшие — в том же порядке посева: сначала все, кто стал в группе
+   * следующим за зоной выхода, затем следующие (ADR-045). Из них строится
+   * сетка за места. Порядок берётся по строкам таблицы, а не по месту:
+   * равенство ниже зоны выхода отбору не мешает, и места у его участников
+   * может ещё не быть, — посеву хватает предложенного порядка.
+   */
+  readonly exits: readonly ParticipantId[];
+  /**
    * Метки групп, где места в зоне выхода ещё не определены. Пока список не
    * пуст, следующий этап не строится.
    */
@@ -60,7 +68,7 @@ export function selectAdvancing(
 
   const blocked = groups.filter((group) => isBlocked(group, advancePerGroup)).map((g) => g.label);
 
-  if (blocked.length > 0) return { seeded: [], byPlace: [], blocked };
+  if (blocked.length > 0) return { seeded: [], byPlace: [], exits: [], blocked };
 
   const byPlace: ParticipantId[][] = [];
 
@@ -73,7 +81,18 @@ export function selectAdvancing(
     byPlace.push(row);
   }
 
-  return { seeded: byPlace.flat(), byPlace, blocked: [] };
+  const advancing = new Set(byPlace.flat());
+  const longest = groups.reduce((max, group) => Math.max(max, group.rows.length), 0);
+  const exits: ParticipantId[] = [];
+
+  for (let position = advancePerGroup; position < longest; position += 1) {
+    for (const group of groups) {
+      const row = group.rows[position];
+      if (row !== undefined && !advancing.has(row.participant)) exits.push(row.participant);
+    }
+  }
+
+  return { seeded: byPlace.flat(), byPlace, exits, blocked: [] };
 }
 
 /**

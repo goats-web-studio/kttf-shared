@@ -66,7 +66,11 @@ export function finalGroupsPlacement(input: PlacementInput): Placement {
   const missed = participantsOfGroups(input.groups).filter((participant) => !seen.has(participant));
 
   rows.push(
-    ...missed.map((participant): PlacementRow => ({ participant, place: null, reason: 'UNDECIDED' })),
+    ...missed.map((participant): PlacementRow => ({
+      participant,
+      place: null,
+      reason: 'UNDECIDED',
+    })),
   );
 
   return { rows, shared: [], unresolved };
@@ -83,11 +87,10 @@ function fromStandings(
   standings: Standings,
   offset: number,
 ): { rows: PlacementRow[]; unresolved: TieGroup[] } {
-  const rows = standings.rows.map(
-    (row): PlacementRow =>
-      row.place === null
-        ? { participant: row.participant, place: null, reason: 'UNDECIDED' }
-        : { participant: row.participant, place: row.place + offset, reason: 'TABLE' },
+  const rows = standings.rows.map((row): PlacementRow =>
+    row.place === null
+      ? { participant: row.participant, place: null, reason: 'UNDECIDED' }
+      : { participant: row.participant, place: row.place + offset, reason: 'TABLE' },
   );
 
   const unresolved = standings.unresolved.map((tie) => ({

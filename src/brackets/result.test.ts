@@ -18,7 +18,10 @@ describe('validateMatchResult', () => {
       ];
 
       for (const [setsA, setsB] of scores) {
-        expect(validateMatchResult(result({ setsA, setsB }), 3), `${String(setsA)}:${String(setsB)}`).toBeNull();
+        expect(
+          validateMatchResult(result({ setsA, setsB }), 3),
+          `${String(setsA)}:${String(setsB)}`,
+        ).toBeNull();
       }
     });
 

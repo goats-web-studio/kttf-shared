@@ -119,11 +119,73 @@ describe('selectAdvancing', () => {
   });
 
   it('групп нет — выходить некому', () => {
-    expect(selectAdvancing([], 2)).toEqual({ seeded: [], byPlace: [[], []], blocked: [] });
+    expect(selectAdvancing([], 2)).toEqual({
+      seeded: [],
+      byPlace: [[], []],
+      exits: [],
+      blocked: [],
+    });
   });
 
   it('из группы обязан выходить хотя бы один', () => {
     expect(() => selectAdvancing([group('гр. 1', ['a1'])], 0)).toThrow(/хотя бы один/);
     expect(() => selectAdvancing([group('гр. 1', ['a1'])], 1.5)).toThrow(/хотя бы один/);
+  });
+});
+
+describe('не вышедшие из групп — сетка за места, ADR-045', () => {
+  it('сеются тем же порядком: все третьи, затем все четвёртые', () => {
+    const selection = selectAdvancing(
+      [group('гр. 1', ['a1', 'a2', 'a3', 'a4']), group('гр. 2', ['b1', 'b2', 'b3', 'b4'])],
+      2,
+    );
+
+    expect(selection.exits).toEqual(['a3', 'b3', 'a4', 'b4']);
+  });
+
+  it('третий одной группы в первом круге встречает четвёртого другой', () => {
+    const selection = selectAdvancing(
+      [group('гр. 1', ['a1', 'a2', 'a3', 'a4']), group('гр. 2', ['b1', 'b2', 'b3', 'b4'])],
+      2,
+    );
+    const bracket = buildKnockout(selection.exits);
+    const pairs = bracket.matches
+      .filter((match) => match.round === 1)
+      .map((match) =>
+        [match.a, match.b].map((side) => (side.kind === 'PARTICIPANT' ? side.participant : '')),
+      );
+
+    expect(pairs).toEqual([
+      ['a3', 'b4'],
+      ['b3', 'a4'],
+    ]);
+  });
+
+  it('группы разного размера: короткой группе просто нечего отдать', () => {
+    const selection = selectAdvancing(
+      [group('гр. 1', ['a1', 'a2', 'a3', 'a4']), group('гр. 2', ['b1', 'b2', 'b3'])],
+      2,
+    );
+
+    expect(selection.exits).toEqual(['a3', 'b3', 'a4']);
+  });
+
+  it('пока отбор остановлен, выбывших тоже нет', () => {
+    const selection = selectAdvancing(
+      [
+        {
+          label: 'гр. 1',
+          rows: [
+            { participant: 'a1', place: null },
+            { participant: 'a2', place: null },
+            { participant: 'a3', place: 3 },
+          ],
+          unresolved: [{ participants: ['a1', 'a2'], places: [1, 2] }],
+        },
+      ],
+      1,
+    );
+
+    expect(selection.exits).toEqual([]);
   });
 });
