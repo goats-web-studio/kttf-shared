@@ -23,8 +23,13 @@ export const PLAYOFF_ROUNDS = [
 ] as const;
 export type PlayoffRound = (typeof PLAYOFF_ROUNDS)[number];
 
-/** Длины по кругам. Отсутствующий круг играется общей длиной плей-офф. */
-export type PlayoffLengths = Readonly<Partial<Record<PlayoffRound, number>>>;
+/**
+ * Длины по кругам. Отсутствующий круг играется общей длиной плей-офф.
+ *
+ * `undefined` допускается явно: так выглядит необязательное поле после
+ * разбора схемой, и тип обязан принять его без приведения.
+ */
+export type PlayoffLengths = Readonly<{ [K in PlayoffRound]?: number | undefined }>;
 
 /** Круги основной сетки по удалённости от финала: 0 — финал. */
 const BY_DISTANCE: readonly PlayoffRound[] = [
