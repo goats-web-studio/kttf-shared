@@ -55,3 +55,11 @@ export type {
   PlacementScheme,
 } from './placement-types.js';
 export { calculatePlacement } from './placement.js';
+
+export type { BracketPosition, PlayoffLengths, PlayoffRound } from './match-length.js';
+export {
+  PLAYOFF_ROUNDS,
+  playoffRoundOf,
+  playoffRoundsFor,
+  playoffSetsToWin,
+} from './match-length.js';

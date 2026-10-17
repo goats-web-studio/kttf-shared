@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { PLAYOFF_ROUNDS, type PlayoffRound } from '../brackets/match-length.js';
+
 /**
  * Конфигурация схемы проведения — ТС 4.2.
  *
@@ -14,6 +16,20 @@ import { z } from 'zod';
 
 /** До скольких выигранных сетов идёт встреча — ТЗ 5.2. */
 const setsToWin = z.union([z.literal(2), z.literal(3), z.literal(4)]);
+
+/**
+ * Длина встречи по кругам плей-офф — ТЗ 5.2, ADR-044.
+ *
+ * Всё необязательно: не заданный круг играется общей длиной плей-офф.
+ * Правило, какой встрече какая длина, — `playoffSetsToWin` в `brackets`.
+ */
+export const playoffSetsToWinSchema = z.object(
+  Object.fromEntries(PLAYOFF_ROUNDS.map((round) => [round, setsToWin.optional()])) as Record<
+    PlayoffRound,
+    z.ZodOptional<typeof setsToWin>
+  >,
+);
+export type PlayoffSetsToWin = z.infer<typeof playoffSetsToWinSchema>;
 
 const roundRobin = z.object({
   type: z.literal('ROUND_ROBIN'),
@@ -33,6 +49,7 @@ const knockout = z
   .object({
     type: z.literal('KNOCKOUT'),
     setsToWin,
+    playoffSetsToWin: playoffSetsToWinSchema.optional(),
     thirdPlace: z.boolean(),
     consolation: z.boolean(),
   })
@@ -74,6 +91,7 @@ const groupsKnockout = z
     ...groupSizing,
     groupSetsToWin: setsToWin,
     koSetsToWin: setsToWin,
+    playoffSetsToWin: playoffSetsToWinSchema.optional(),
     thirdPlace: z.boolean(),
   })
   .refine(exactlyOneSizing, { message: SIZING_MESSAGE });

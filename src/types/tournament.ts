@@ -29,13 +29,22 @@ export type TournamentStatus = z.infer<typeof tournamentStatusSchema>;
 export const tournamentLevelSchema = z.enum(['CLUB', 'REGIONAL', 'NATIONAL']);
 export type TournamentLevel = z.infer<typeof tournamentLevelSchema>;
 
+/**
+ * Состояние записи — ТЗ 4.4.
+ *
+ * `PENDING` и `REJECTED` — заявка вне рейтинговой планки на рассмотрении
+ * организатора и отказ по ней (ADR-044). Место в турнире ни та, ни другая
+ * не занимает: в жеребьёвку попадает только принятая.
+ */
 export const registrationStatusSchema = z.enum([
   'REGISTERED',
+  'PENDING',
   'WAITLIST',
   'CONFIRMED',
   'PLAYING',
   'WITHDRAWN',
   'NO_SHOW',
+  'REJECTED',
 ]);
 export type RegistrationStatus = z.infer<typeof registrationStatusSchema>;
 
@@ -55,6 +64,13 @@ const fields = {
   /** Допускаются игроки с рейтингом ниже значения (ТЗ 4.2). */
   ratingCapMax: rating.optional(),
   ratingCapMin: rating.optional(),
+  /**
+   * Принимать заявки вне рейтинговой планки на рассмотрение — ADR-044.
+   *
+   * Игрок, не прошедший по рейтингу, подаёт заявку, организатор принимает
+   * или отклоняет её до старта. Возраст и пол остаются жёсткими условиями.
+   */
+  reviewOutOfRating: z.boolean().optional(),
   birthYearFrom: birthYear.optional(),
   birthYearTo: birthYear.optional(),
   genderLimit: genderSchema.optional(),
@@ -69,11 +85,19 @@ const fields = {
 
 interface Bounds {
   startsAt?: string | undefined;
-  registrationEndsAt?: string | undefined;
-  ratingCapMin?: number | undefined;
-  ratingCapMax?: number | undefined;
-  birthYearFrom?: number | undefined;
-  birthYearTo?: number | undefined;
+  registrationEndsAt?: string | null | undefined;
+  ratingCapMin?: number | null | undefined;
+  ratingCapMax?: number | null | undefined;
+  birthYearFrom?: number | null | undefined;
+  birthYearTo?: number | null | undefined;
+}
+
+/** Нижняя граница выше верхней. Незаданная или стёртая граница не мешает. */
+function inverted<T extends number | string>(
+  low: T | null | undefined,
+  high: T | null | undefined,
+): boolean {
+  return low !== undefined && low !== null && high !== undefined && high !== null && low > high;
 }
 
 /**
@@ -83,26 +107,10 @@ interface Bounds {
  * может лежать в базе, и там её сверит сервис.
  */
 function boundsConsistent(value: Bounds): boolean {
-  if (
-    value.startsAt !== undefined &&
-    value.registrationEndsAt !== undefined &&
-    value.registrationEndsAt > value.startsAt
-  ) {
-    return false;
-  }
-
-  if (
-    value.ratingCapMin !== undefined &&
-    value.ratingCapMax !== undefined &&
-    value.ratingCapMin > value.ratingCapMax
-  ) {
-    return false;
-  }
-
   return !(
-    value.birthYearFrom !== undefined &&
-    value.birthYearTo !== undefined &&
-    value.birthYearFrom > value.birthYearTo
+    inverted(value.registrationEndsAt, value.startsAt) ||
+    inverted(value.ratingCapMin, value.ratingCapMax) ||
+    inverted(value.birthYearFrom, value.birthYearTo)
   );
 }
 
@@ -113,10 +121,30 @@ export const createTournamentSchema = z.object(fields).refine(boundsConsistent, 
 });
 export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
 
-/** Клуб не меняется: турнир принадлежит тому клубу, в котором создан. */
+/**
+ * Правка турнира — до старта (ТС 7.5).
+ *
+ * Клуб не меняется: турнир принадлежит тому клубу, в котором создан.
+ *
+ * `null` у необязательного условия стирает его (ADR-044): снятая в форме
+ * планка рейтинга обязана перестать отсекать игроков. Ограничения полей
+ * берутся из схемы создания, а не повторяются.
+ */
 export const updateTournamentSchema = z
   .object(fields)
   .omit({ clubId: true })
+  .extend({
+    registrationEndsAt: fields.registrationEndsAt.unwrap().nullable(),
+    maxParticipants: fields.maxParticipants.unwrap().nullable(),
+    ratingCapMax: fields.ratingCapMax.unwrap().nullable(),
+    ratingCapMin: fields.ratingCapMin.unwrap().nullable(),
+    birthYearFrom: fields.birthYearFrom.unwrap().nullable(),
+    birthYearTo: fields.birthYearTo.unwrap().nullable(),
+    genderLimit: fields.genderLimit.unwrap().nullable(),
+    seedingConfig: fields.seedingConfig.unwrap().nullable(),
+    description: fields.description.unwrap().nullable(),
+    prizeInfo: fields.prizeInfo.unwrap().nullable(),
+  })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { message: 'Нужно указать хотя бы одно поле' })
   .refine(boundsConsistent, { message: BOUNDS_MESSAGE });
@@ -152,7 +180,9 @@ export type RegisterInput = z.infer<typeof registerSchema>;
  */
 export const updateRegistrationSchema = z
   .object({
-    status: z.enum(['CONFIRMED', 'WAITLIST', 'WITHDRAWN', 'NO_SHOW']).optional(),
+    // `CONFIRMED` из `PENDING` — принять заявку, `REJECTED` — отклонить
+    // (ADR-044). Принятая при полном составе уходит в лист ожидания.
+    status: z.enum(['CONFIRMED', 'WAITLIST', 'WITHDRAWN', 'NO_SHOW', 'REJECTED']).optional(),
     isRated: z.boolean().optional(),
     seed: z.number().int().positive().max(1024).nullable().optional(),
   })
@@ -170,6 +200,7 @@ export const tournamentViewSchema = z.object({
   maxParticipants: z.number().int().nullable(),
   ratingCapMax: z.string().nullable(),
   ratingCapMin: z.string().nullable(),
+  reviewOutOfRating: z.boolean(),
   birthYearFrom: z.number().int().nullable(),
   birthYearTo: z.number().int().nullable(),
   genderLimit: genderSchema.nullable(),

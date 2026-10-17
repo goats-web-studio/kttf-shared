@@ -218,6 +218,46 @@ describe('изменение турнира', () => {
     // Одна половина пары — вторая лежит в базе, её сверит сервис.
     expect(updateTournamentSchema.safeParse({ ratingCapMin: 400 }).success).toBe(true);
   });
+
+  it('условие можно стереть, обязательное поле — нет', () => {
+    // Снятая в форме планка обязана перестать отсекать игроков (ADR-044).
+    expect(
+      updateTournamentSchema.safeParse({ ratingCapMax: null, registrationEndsAt: null }).success,
+    ).toBe(true);
+    // Стёртая граница не считается вывернутой.
+    expect(updateTournamentSchema.safeParse({ ratingCapMin: 400, ratingCapMax: null }).success).toBe(
+      true,
+    );
+    expect(updateTournamentSchema.safeParse({ name: null }).success).toBe(false);
+    expect(updateTournamentSchema.safeParse({ tableCount: null }).success).toBe(false);
+  });
+
+  it('заявки вне рейтинга включаются галочкой', () => {
+    expect(updateTournamentSchema.safeParse({ reviewOutOfRating: true }).success).toBe(true);
+    expect(createTournamentSchema.safeParse({ ...valid, reviewOutOfRating: false }).success).toBe(
+      true,
+    );
+  });
+});
+
+describe('длина встреч по кругам плей-офф', () => {
+  const knockout = { type: 'KNOCKOUT', setsToWin: 3, thirdPlace: true, consolation: false };
+
+  it('любой круг можно задать отдельно, не заданные — общей длиной', () => {
+    expect(
+      formatConfigSchema.safeParse({
+        ...knockout,
+        playoffSetsToWin: { final: 4, thirdPlace: 2, quarterfinal: 2 },
+      }).success,
+    ).toBe(true);
+    expect(formatConfigSchema.safeParse(knockout).success).toBe(true);
+  });
+
+  it('длина та же, что у всего турнира: до 2, 3 или 4 побед', () => {
+    expect(
+      formatConfigSchema.safeParse({ ...knockout, playoffSetsToWin: { final: 5 } }).success,
+    ).toBe(false);
+  });
 });
 
 describe('правка участника', () => {
@@ -230,6 +270,13 @@ describe('правка участника', () => {
     // рейтингов (ТС 5.4), а не отдельным действием человека.
     expect(updateRegistrationSchema.safeParse({ status: 'PLAYING' }).success).toBe(false);
     expect(updateRegistrationSchema.safeParse({ status: 'WITHDRAWN' }).success).toBe(true);
+  });
+
+  it('заявку принимают или отклоняют', () => {
+    expect(updateRegistrationSchema.safeParse({ status: 'CONFIRMED' }).success).toBe(true);
+    expect(updateRegistrationSchema.safeParse({ status: 'REJECTED' }).success).toBe(true);
+    // Обратно на рассмотрение руками не отправляют: это состояние заявки, а не решение.
+    expect(updateRegistrationSchema.safeParse({ status: 'PENDING' }).success).toBe(false);
   });
 
   it('посев можно снять', () => {
