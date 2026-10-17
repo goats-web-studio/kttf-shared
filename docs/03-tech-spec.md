@@ -185,6 +185,7 @@ model User {
   email         String?  @unique
   locale        Locale   @default(RU)
   telegramId    String?                   // числовой chat_id, под уведомления
+  isAdmin       Boolean  @default(false)  // администратор платформы, ADR-046
   createdAt     DateTime @default(now())
 
   player        Player?
@@ -208,7 +209,8 @@ model Player {
   birthDate      DateTime? @db.Date        // необязательна, обязана совпадать с годом
   birthYearOnly  Boolean  @default(true)   // показывать посторонним только год (ADR-037)
   gender         Gender
-  city           String
+  cityId         String                    // справочник, ADR-046
+  city           City     @relation(fields: [cityId], references: [id])
   photoUrl       String?
   clubId         String?
   club           Club?    @relation(fields: [clubId], references: [id])
@@ -237,7 +239,7 @@ model Player {
   ratingEvents   RatingEvent[]
 
   @@index([rating(sort: Desc)])
-  @@index([city, rating(sort: Desc)])
+  @@index([cityId, rating(sort: Desc)])
   @@index([lastName, firstName])
   @@index([coachPlayerId])              // список тренеров — выборка по ссылке
 }
@@ -246,13 +248,41 @@ enum Gender { MALE FEMALE }
 enum PlayingHand { RIGHT LEFT }
 enum Grip { SHAKEHAND PENHOLD }           // европейский и азиатский («перо»)
 
+// ============ Справочник стран и городов (ADR-046) ============
+
+// Ведёт администратор платформы. Записи скрываются, а не удаляются.
+model Country {
+  id        String  @id @default(uuid())
+  code      String  @unique              // ISO 3166-1 alpha-2
+  name      String                       // по-русски
+  nameKk    String?                      // по-казахски, без него — русское
+  sortOrder Int     @default(100)
+  isActive  Boolean @default(true)
+  cities    City[]
+}
+
+model City {
+  id        String  @id @default(uuid())
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
+  name      String
+  nameKk    String?
+  sortOrder Int     @default(100)        // столицы впереди
+  isActive  Boolean @default(true)
+  clubs     Club[]
+  players   Player[]
+
+  @@unique([countryId, name])
+}
+
 // ============ Клубы ============
 
 model Club {
   id          String   @id @default(uuid())
   name        String
   shortName   String?
-  city        String
+  cityId      String                     // справочник, ADR-046
+  city        City     @relation(fields: [cityId], references: [id])
   address     String?
   lat         Float?
   lng         Float?
@@ -845,7 +875,7 @@ POST   /api/v1/auth/change-password  { currentPassword, newPassword } → { acce
 ### 7.2. Игроки
 
 ```
-GET    /api/v1/players               ?search&city&clubId&withoutAccount&coachesOnly&page&limit
+GET    /api/v1/players               ?search&cityId&clubId&withoutAccount&coachesOnly&page&limit
 GET    /api/v1/players/:id
 PATCH  /api/v1/players/:id
 GET    /api/v1/players/:id/rating-history   ?from&to
@@ -863,14 +893,14 @@ POST   /api/v1/players                      # создание организа�
 ### 7.3. Рейтинги
 
 ```
-GET    /api/v1/ratings               ?city&clubId&gender&birthYearFrom&birthYearTo&page
+GET    /api/v1/ratings               ?cityId&clubId&gender&birthYearFrom&birthYearTo&page
 GET    /api/v1/ratings/top           ?limit=100
 ```
 
 ### 7.4. Клубы
 
 ```
-GET    /api/v1/clubs                 ?city&search
+GET    /api/v1/clubs                 ?cityId&search
 GET    /api/v1/clubs/:id
 POST   /api/v1/clubs
 PATCH  /api/v1/clubs/:id                     # null у необязательного поля — стереть (ADR-043)
@@ -881,10 +911,27 @@ GET    /api/v1/clubs/:id/balance
 GET    /api/v1/clubs/:id/transactions ?from&to&page
 ```
 
+### 7.4а. Справочник стран и городов
+
+```
+GET    /api/v1/countries                          # только доступные
+GET    /api/v1/cities                ?countryId   # доступные: город и страна не скрыты
+GET    /api/v1/admin/countries                    # со скрытыми, только администратор
+POST   /api/v1/admin/countries       { code, name, nameKk?, sortOrder? }
+PATCH  /api/v1/admin/countries/:id   { code?, name?, nameKk?, sortOrder?, isActive? }
+GET    /api/v1/admin/cities          ?countryId
+POST   /api/v1/admin/cities          { countryId, name, nameKk?, sortOrder? }
+PATCH  /api/v1/admin/cities/:id      { name?, nameKk?, sortOrder?, isActive? }
+```
+
+ADR-046. Удаления нет: скрытая запись не предлагается в формах, но остаётся у клубов и игроков, у которых уже указана. Клуб и игрок принимают `cityId`, недоступный город — `CITY_UNAVAILABLE`, дубликат кода страны или названия города в стране без учёта регистра — `PLACE_ALREADY_EXISTS`. В ответах город — объект `{ id, name, nameKk }`.
+
+Маршруты `/admin/*` закрыты guard'ом администратора: признак `User.isAdmin` читается из базы на каждый запрос. Роль выдаётся скриптом `pnpm set-admin <телефон|логин> [--revoke]`, маршрута для этого нет.
+
 ### 7.5. Турниры
 
 ```
-GET    /api/v1/tournaments           ?city&clubId&status&from&to&page
+GET    /api/v1/tournaments           ?cityId&clubId&status&from&to&page
 POST   /api/v1/tournaments
 GET    /api/v1/tournaments/:id
 PATCH  /api/v1/tournaments/:id
