@@ -29,11 +29,29 @@ export const createClubSchema = z.object({
 });
 export type CreateClubInput = z.infer<typeof createClubSchema>;
 
+const create = createClubSchema.shape;
+
 /**
  * Изменение клуба. Пустое тело отвергается: запрос, который ничего не меняет,
  * почти всегда означает ошибку на клиенте, а не намерение.
+ *
+ * `null` у необязательного поля — «стереть» (ADR-043): организатор, убравший
+ * из формы старый телефон, ждёт, что его не станет и на странице клуба.
+ * Название, город и столы стереть нельзя — без них клуба нет. Ограничения
+ * полей берутся из схемы создания, а не повторяются.
  */
 export const updateClubSchema = createClubSchema
+  .extend({
+    shortName: create.shortName.unwrap().nullable(),
+    address: create.address.unwrap().nullable(),
+    lat: create.lat.unwrap().nullable(),
+    lng: create.lng.unwrap().nullable(),
+    phone: create.phone.unwrap().nullable(),
+    whatsapp: create.whatsapp.unwrap().nullable(),
+    instagram: create.instagram.unwrap().nullable(),
+    logoUrl: create.logoUrl.unwrap().nullable(),
+    description: create.description.unwrap().nullable(),
+  })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { message: 'Нужно указать хотя бы одно поле' });
 export type UpdateClubInput = z.infer<typeof updateClubSchema>;
@@ -47,8 +65,15 @@ export type ListClubsQuery = z.infer<typeof listClubsSchema>;
 export const clubRoleSchema = z.enum(['OWNER', 'ORGANIZER', 'REFEREE']);
 export type ClubRole = z.infer<typeof clubRoleSchema>;
 
+/**
+ * Добавление в состав — ТЗ 1: состав организаторов ведёт владелец.
+ *
+ * Человек указывается тем, чем он входит, — логином или телефоном
+ * (ADR-043). Внутренний идентификатор аккаунта владельцу взять негде:
+ * списка пользователей платформа не отдаёт и отдавать не должна.
+ */
 export const addMemberSchema = z.object({
-  userId: z.uuid(),
+  identifier: z.string().trim().min(1).max(64),
   role: clubRoleSchema,
 });
 export type AddMemberInput = z.infer<typeof addMemberSchema>;

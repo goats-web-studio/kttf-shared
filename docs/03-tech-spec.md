@@ -850,9 +850,9 @@ GET    /api/v1/ratings/top           ?limit=100
 GET    /api/v1/clubs                 ?city&search
 GET    /api/v1/clubs/:id
 POST   /api/v1/clubs
-PATCH  /api/v1/clubs/:id
+PATCH  /api/v1/clubs/:id                     # null у необязательного поля — стереть (ADR-043)
 GET    /api/v1/clubs/:id/members
-POST   /api/v1/clubs/:id/members
+POST   /api/v1/clubs/:id/members             # { identifier: логин | телефон, role } (ADR-043)
 DELETE /api/v1/clubs/:id/members/:userId
 GET    /api/v1/clubs/:id/balance
 GET    /api/v1/clubs/:id/transactions ?from&to&page

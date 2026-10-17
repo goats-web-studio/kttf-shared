@@ -32,12 +32,37 @@ describe('изменение клуба', () => {
   it('одного поля достаточно', () => {
     expect(updateClubSchema.safeParse({ city: 'Астана' }).success).toBe(true);
   });
+
+  it('необязательное поле можно стереть, обязательное — нет', () => {
+    // Старый телефон, убранный из формы, обязан исчезнуть и со страницы
+    // клуба (ADR-043). Клуб без названия или города — уже не клуб.
+    expect(updateClubSchema.safeParse({ phone: null, description: null }).success).toBe(true);
+    expect(updateClubSchema.safeParse({ name: null }).success).toBe(false);
+    expect(updateClubSchema.safeParse({ city: null }).success).toBe(false);
+    expect(updateClubSchema.safeParse({ tableCount: null }).success).toBe(false);
+  });
+
+  it('ограничения полей те же, что при создании', () => {
+    expect(updateClubSchema.safeParse({ lat: 91 }).success).toBe(false);
+    expect(updateClubSchema.safeParse({ phone: 'x'.repeat(31) }).success).toBe(false);
+  });
 });
 
 describe('состав клуба', () => {
+  it('человек указывается логином или телефоном', () => {
+    expect(addMemberSchema.safeParse({ identifier: 'organizer', role: 'ORGANIZER' }).success).toBe(
+      true,
+    );
+    expect(addMemberSchema.safeParse({ identifier: '+77011234567', role: 'OWNER' }).success).toBe(
+      true,
+    );
+    expect(addMemberSchema.safeParse({ identifier: '  ', role: 'ORGANIZER' }).success).toBe(false);
+  });
+
   it('роль берётся из перечня, а не из строки', () => {
-    expect(addMemberSchema.safeParse({ userId: CLUB_ID, role: 'OWNER' }).success).toBe(true);
-    expect(addMemberSchema.safeParse({ userId: CLUB_ID, role: 'ADMIN' }).success).toBe(false);
+    expect(addMemberSchema.safeParse({ identifier: 'organizer', role: 'ADMIN' }).success).toBe(
+      false,
+    );
   });
 });
 
