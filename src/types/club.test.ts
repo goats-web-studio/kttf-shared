@@ -6,19 +6,48 @@ const CLUB_ID = '00000000-0000-4000-8000-000000000001';
 
 describe('создание клуба', () => {
   it('название и город обязательны, остальное нет', () => {
-    expect(createClubSchema.safeParse({ name: 'Ракетка', city: 'Алматы' }).success).toBe(true);
+    expect(
+      createClubSchema.safeParse({
+        name: 'Ракетка',
+        cityId: '00000000-0000-4000-8000-0000000000c1',
+      }).success,
+    ).toBe(true);
     expect(createClubSchema.safeParse({ name: 'Ракетка' }).success).toBe(false);
   });
 
   it('клуб без столов не заводится', () => {
     // Ноль столов означал бы опечатку: турниры такому клубу проводить негде.
-    expect(createClubSchema.safeParse({ name: 'Р', city: 'А', tableCount: 0 }).success).toBe(false);
-    expect(createClubSchema.safeParse({ name: 'Р', city: 'А', tableCount: 4 }).success).toBe(true);
+    expect(
+      createClubSchema.safeParse({
+        name: 'Р',
+        cityId: '00000000-0000-4000-8000-0000000000c1',
+        tableCount: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      createClubSchema.safeParse({
+        name: 'Р',
+        cityId: '00000000-0000-4000-8000-0000000000c1',
+        tableCount: 4,
+      }).success,
+    ).toBe(true);
   });
 
   it('координаты за пределами земного шара не принимаются', () => {
-    expect(createClubSchema.safeParse({ name: 'Р', city: 'А', lat: 91 }).success).toBe(false);
-    expect(createClubSchema.safeParse({ name: 'Р', city: 'А', lng: -181 }).success).toBe(false);
+    expect(
+      createClubSchema.safeParse({
+        name: 'Р',
+        cityId: '00000000-0000-4000-8000-0000000000c1',
+        lat: 91,
+      }).success,
+    ).toBe(false);
+    expect(
+      createClubSchema.safeParse({
+        name: 'Р',
+        cityId: '00000000-0000-4000-8000-0000000000c1',
+        lng: -181,
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -30,7 +59,9 @@ describe('изменение клуба', () => {
   });
 
   it('одного поля достаточно', () => {
-    expect(updateClubSchema.safeParse({ city: 'Астана' }).success).toBe(true);
+    expect(
+      updateClubSchema.safeParse({ cityId: '00000000-0000-4000-8000-0000000000c1' }).success,
+    ).toBe(true);
   });
 
   it('необязательное поле можно стереть, обязательное — нет', () => {
@@ -38,7 +69,7 @@ describe('изменение клуба', () => {
     // клуба (ADR-043). Клуб без названия или города — уже не клуб.
     expect(updateClubSchema.safeParse({ phone: null, description: null }).success).toBe(true);
     expect(updateClubSchema.safeParse({ name: null }).success).toBe(false);
-    expect(updateClubSchema.safeParse({ city: null }).success).toBe(false);
+    expect(updateClubSchema.safeParse({ cityId: null }).success).toBe(false);
     expect(updateClubSchema.safeParse({ tableCount: null }).success).toBe(false);
   });
 
@@ -72,7 +103,7 @@ describe('клуб в ответе', () => {
       id: CLUB_ID,
       name: 'Ракетка',
       shortName: null,
-      city: 'Алматы',
+      city: { id: '00000000-0000-4000-8000-0000000000c1', name: 'Алматы', nameKk: null },
       address: null,
       lat: null,
       lng: null,

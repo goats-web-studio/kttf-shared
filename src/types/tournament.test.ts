@@ -225,9 +225,9 @@ describe('изменение турнира', () => {
       updateTournamentSchema.safeParse({ ratingCapMax: null, registrationEndsAt: null }).success,
     ).toBe(true);
     // Стёртая граница не считается вывернутой.
-    expect(updateTournamentSchema.safeParse({ ratingCapMin: 400, ratingCapMax: null }).success).toBe(
-      true,
-    );
+    expect(
+      updateTournamentSchema.safeParse({ ratingCapMin: 400, ratingCapMax: null }).success,
+    ).toBe(true);
     expect(updateTournamentSchema.safeParse({ name: null }).success).toBe(false);
     expect(updateTournamentSchema.safeParse({ tableCount: null }).success).toBe(false);
   });
@@ -325,7 +325,7 @@ describe('участник в ответе', () => {
         middleName: null,
         birthYear: 2001,
         gender: 'MALE',
-        city: 'Алматы',
+        city: { id: '00000000-0000-4000-8000-0000000000c1', name: 'Алматы', nameKk: null },
         photoUrl: null,
         clubId: null,
         rating: '250.00',

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculatePlacement, type PlacementReason as EnginePlacementReason } from '../brackets/index.js';
+import {
+  calculatePlacement,
+  type PlacementReason as EnginePlacementReason,
+} from '../brackets/index.js';
 import { calculateStandings } from '../brackets/standings.js';
 
 import {
@@ -41,7 +44,7 @@ const player = {
   middleName: null,
   birthYear: 1995,
   gender: 'MALE',
-  city: 'Алматы',
+  city: { id: '00000000-0000-4000-8000-0000000000c1', name: 'Алматы', nameKk: null },
   photoUrl: null,
   clubId: null,
   rating: '294.80',

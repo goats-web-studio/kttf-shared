@@ -14,7 +14,7 @@ const valid = {
   firstName: 'Данияр',
   birthYear: 2001,
   gender: 'MALE',
-  city: 'Алматы',
+  cityId: '00000000-0000-4000-8000-0000000000c1',
 };
 
 describe('создание игрока', () => {
@@ -44,9 +44,12 @@ describe('дата рождения рядом с годом', () => {
   it('дата без года не принимается', () => {
     // Год — источник истины для допуска (birthYearFrom/birthYearTo). Дата,
     // пришедшая одна, оставила бы год прежним и развела их.
-    expect(updatePlayerSchema.safeParse({ city: 'Астана', birthDate: '2001-04-12' }).success).toBe(
-      false,
-    );
+    expect(
+      updatePlayerSchema.safeParse({
+        cityId: '00000000-0000-4000-8000-0000000000c1',
+        birthDate: '2001-04-12',
+      }).success,
+    ).toBe(false);
   });
 
   it('дата, спорящая с годом, отвергается', () => {
@@ -114,7 +117,9 @@ describe('изменение игрока', () => {
   });
 
   it('одного поля достаточно', () => {
-    expect(updatePlayerSchema.safeParse({ city: 'Астана' }).success).toBe(true);
+    expect(
+      updatePlayerSchema.safeParse({ cityId: '00000000-0000-4000-8000-0000000000c1' }).success,
+    ).toBe(true);
   });
 
   it('null очищает необязательное поле', () => {
@@ -125,7 +130,7 @@ describe('изменение игрока', () => {
   });
 
   it('обязательное поле очистить нельзя', () => {
-    expect(updatePlayerSchema.safeParse({ city: null }).success).toBe(false);
+    expect(updatePlayerSchema.safeParse({ cityId: null }).success).toBe(false);
     expect(updatePlayerSchema.safeParse({ lastName: null }).success).toBe(false);
   });
 
@@ -151,7 +156,7 @@ describe('игрок в ответе', () => {
       middleName: null,
       birthYear: 2001,
       gender: 'MALE',
-      city: 'Алматы',
+      city: { id: '00000000-0000-4000-8000-0000000000c1', name: 'Алматы', nameKk: null },
       photoUrl: null,
       clubId: null,
       rating: '250.00',
@@ -181,7 +186,7 @@ describe('игрок в ответе', () => {
       middleName: null,
       birthYear: 2001,
       gender: 'MALE',
-      city: 'Алматы',
+      city: { id: '00000000-0000-4000-8000-0000000000c1', name: 'Алматы', nameKk: null },
       photoUrl: null,
       clubId: null,
       rating: '250.00',

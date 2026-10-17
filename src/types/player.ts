@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { pageQuerySchema } from './pagination.js';
+import { cityRefSchema } from './place.js';
 
 /**
  * Контракт игроков — ТС 7.2.
@@ -145,7 +146,8 @@ const profile = {
    */
   birthYearOnly: z.boolean().optional(),
   gender: genderSchema,
-  city: z.string().trim().min(1).max(100),
+  /** Город из справочника — ADR-046. */
+  cityId: z.uuid(),
   photoUrl: photo.optional(),
   clubId: z.uuid().optional(),
   playingHand: playingHandSchema.optional(),
@@ -201,7 +203,7 @@ export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
 
 export const listPlayersSchema = pageQuerySchema.extend({
   search: z.string().trim().min(1).max(100).optional(),
-  city: z.string().trim().min(1).max(100).optional(),
+  cityId: z.uuid().optional(),
   clubId: z.uuid().optional(),
   /**
    * Только игроки без кабинета — нужен регистрации (ADR-034).
@@ -241,7 +243,7 @@ export const playerViewSchema = z.object({
   middleName: z.string().nullable(),
   birthYear: z.number().int(),
   gender: z.string(),
-  city: z.string(),
+  city: cityRefSchema,
   photoUrl: z.string().nullable(),
   clubId: z.uuid().nullable(),
   /**

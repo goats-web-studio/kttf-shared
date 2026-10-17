@@ -4,6 +4,7 @@ export * from './club.js';
 export * from './match.js';
 export * from './media.js';
 export * from './pagination.js';
+export * from './place.js';
 export * from './player.js';
 export * from './player-history.js';
 export * from './results.js';

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { pageQuerySchema } from './pagination.js';
+import { cityRefSchema } from './place.js';
 
 /**
  * Контракт клубов — ТС 7.4.
@@ -14,7 +15,8 @@ const optionalText = z.string().trim().min(1).max(500);
 
 export const createClubSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  city: z.string().trim().min(1).max(100),
+  /** Город из справочника — ADR-046. */
+  cityId: z.uuid(),
   shortName: optionalText.max(50).optional(),
   address: optionalText.optional(),
   lat: z.number().min(-90).max(90).optional(),
@@ -57,7 +59,7 @@ export const updateClubSchema = createClubSchema
 export type UpdateClubInput = z.infer<typeof updateClubSchema>;
 
 export const listClubsSchema = pageQuerySchema.extend({
-  city: z.string().trim().min(1).max(100).optional(),
+  cityId: z.uuid().optional(),
   search: z.string().trim().min(1).max(100).optional(),
 });
 export type ListClubsQuery = z.infer<typeof listClubsSchema>;
@@ -83,7 +85,7 @@ export const clubViewSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   shortName: z.string().nullable(),
-  city: z.string(),
+  city: cityRefSchema,
   address: z.string().nullable(),
   lat: z.number().nullable(),
   lng: z.number().nullable(),

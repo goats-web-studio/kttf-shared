@@ -66,6 +66,21 @@ export const ERROR_CODES = {
    * Считать по текущему вместо снимка нельзя — это тихо нарушило бы ТС 5.4.
    */
   RATING_SNAPSHOT_MISSING: 'RATING_SNAPSHOT_MISSING',
+
+  // ---------- справочник стран и городов: ADR-046 ----------
+
+  /**
+   * Города нет в справочнике, он скрыт или скрыта его страна. Новый клуб
+   * или игрок в такой город не записывается; у кого он уже указан, тот
+   * с ним и остаётся.
+   */
+  CITY_UNAVAILABLE: 'CITY_UNAVAILABLE',
+  /**
+   * Такая запись уже есть: страна с этим кодом или город с этим названием
+   * в той же стране. Два «Алматы» в одной стране — ровно то, от чего
+   * справочник избавляет.
+   */
+  PLACE_ALREADY_EXISTS: 'PLACE_ALREADY_EXISTS',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

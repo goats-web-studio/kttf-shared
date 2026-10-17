@@ -158,7 +158,8 @@ export const duplicateTournamentSchema = z.object({
 export type DuplicateTournamentInput = z.infer<typeof duplicateTournamentSchema>;
 
 export const listTournamentsSchema = pageQuerySchema.extend({
-  city: z.string().trim().min(1).max(100).optional(),
+  /** Город клуба-организатора. */
+  cityId: z.uuid().optional(),
   clubId: z.uuid().optional(),
   status: tournamentStatusSchema.optional(),
   from: z.iso.datetime().optional(),

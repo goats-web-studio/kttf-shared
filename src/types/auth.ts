@@ -111,6 +111,8 @@ export const authUserViewSchema = z.object({
   /** `null`, пока профиль игрока не заведён — ТЗ 2.2 заполняется отдельно. */
   playerId: z.uuid().nullable(),
   clubRoles: z.array(clubRoleViewSchema),
+  /** Администратор платформы — ведёт справочники (ADR-046). */
+  isAdmin: z.boolean(),
 });
 export type AuthUserView = z.infer<typeof authUserViewSchema>;
 
