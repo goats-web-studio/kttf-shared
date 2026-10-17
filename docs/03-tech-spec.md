@@ -542,6 +542,10 @@ type FormatConfig =
       koSetsToWin: 2 | 3 | 4;
       playoffSetsToWin?: PlayoffSetsToWin;
       thirdPlace: boolean;
+      // Не вышедшие из групп играют сетку за места — этап CONSOLATION
+      // после плей-офф (ADR-045). По умолчанию false: прежние турниры
+      // играются как раньше.
+      exitBracket: boolean;
     }
   | {
       type: 'GROUPS_FINAL_GROUPS';
