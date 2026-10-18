@@ -934,7 +934,7 @@ GET    /api/v1/ratings/top           ?limit=100
 ```
 GET    /api/v1/clubs                 ?cityId&search
 GET    /api/v1/clubs/:id
-POST   /api/v1/clubs
+POST   /api/v1/clubs                          # только администратор платформы, ADR-049
 PATCH  /api/v1/clubs/:id                     # null у необязательного поля — стереть (ADR-043)
 GET    /api/v1/clubs/:id/members
 POST   /api/v1/clubs/:id/members             # { identifier: логин | телефон, role } (ADR-043)
