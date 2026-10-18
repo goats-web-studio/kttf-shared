@@ -248,6 +248,31 @@ enum Gender { MALE FEMALE }
 enum PlayingHand { RIGHT LEFT }
 enum Grip { SHAKEHAND PENHOLD }           // европейский и азиатский («перо»)
 
+// ============ Заявки клубов (ADR-047) ============
+
+// Форма «Напишите нам». Отправляет кто угодно, читает администратор.
+model ClubApplication {
+  id          String                @id @default(uuid())
+  name        String
+  contact     String                       // телефон или email, как написали
+  clubName    String
+  city        String                       // строкой: города может не быть в справочнике
+  address     String?
+  tableCount  Int?
+  tournaments String?
+  message     String?
+  status      ClubApplicationStatus @default(NEW)
+  userId      String?                      // вошедший отправитель
+  ipHash      String                       // HMAC адреса — для лимита, сам адрес не хранится
+  createdAt   DateTime              @default(now())
+  handledAt   DateTime?
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([ipHash, createdAt])
+}
+
+enum ClubApplicationStatus { NEW DONE }
+
 // ============ Справочник стран и городов (ADR-046) ============
 
 // Ведёт администратор платформы. Записи скрываются, а не удаляются.
@@ -928,6 +953,16 @@ ADR-046. Удаления нет: скрытая запись не предла�
 
 Маршруты `/admin/*` закрыты guard'ом администратора: признак `User.isAdmin` читается из базы на каждый запрос. Роль выдаётся скриптом `pnpm set-admin <телефон|логин> [--revoke]`, маршрута для этого нет.
 
+### 7.4б. Заявки клубов
+
+```
+POST   /api/v1/club-applications              { name, contact, clubName, city, address?, tableCount?, tournaments?, message?, website? }  → 204
+GET    /api/v1/admin/club-applications        ?status&page&limit   # свежие сверху, только администратор
+PATCH  /api/v1/admin/club-applications/:id    { status: NEW | DONE }
+```
+
+ADR-047. Отправка открыта всем, токен необязателен: вошедший привязывается к заявке. `website` — ловушка для ботов: заполнена — ответ тот же 204, заявка не сохраняется. Больше пяти заявок в час с одного адреса — `RATE_LIMITED` (429); адрес — последний элемент `X-Forwarded-For` от Caddy, в базе только его HMAC. `DONE` ставит `handledAt`, возврат в `NEW` его снимает.
+
 ### 7.5. Турниры
 
 ```
@@ -1063,7 +1098,7 @@ GET    /api/v1/files/:folder/:name
 
 - Все соединения по HTTPS, TLS 1.3
 - Пароль хранится как `scrypt` с солью на пользователя (ADR-034). Смена пароля требует текущего и обрывает остальные сессии (ADR-035)
-- Rate limiting: 100 запросов API в минуту на пользователя и отдельный, более строгий предел на `/auth/login`. **Не сделано** — 05-state.md, долг по бэкенду. Прежнее ограничение «5 кодов в час» ушло вместе с одноразовым кодом (ADR-034), и вход сейчас перебирается ничем не ограниченно
+- Rate limiting: 100 запросов API в минуту на пользователя и отдельный, более строгий предел на `/auth/login`. **Не сделано** — 05-state.md, долг по бэкенду. Свой лимит есть только у заявки клуба: пять в час с адреса (ADR-047). Прежнее ограничение «5 кодов в час» ушло вместе с одноразовым кодом (ADR-034), и вход сейчас перебирается ничем не ограниченно
 - Ролевая модель проверяется на уровне guard'ов, не на уровне интерфейса
 - Персональные данные шифруются at rest средствами БД
 - Журнал действий: все изменения рейтинга, финансовые операции, изменения результатов
