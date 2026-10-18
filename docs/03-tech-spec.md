@@ -977,7 +977,7 @@ ADR-047. Отправка открыта всем, токен необязате
 ### 7.5. Турниры
 
 ```
-GET    /api/v1/tournaments           ?cityId&clubId&playerId&status&from&to&page   # playerId — «Мои турниры», ADR-048; status — один или через запятую, ADR-051
+GET    /api/v1/tournaments           ?cityId&clubId&playerId&status&from&to&order&page   # playerId — «Мои турниры», ADR-048; status — один или через запятую, ADR-051; order=asc|desc, ADR-052
 POST   /api/v1/tournaments
 GET    /api/v1/tournaments/:id
 PATCH  /api/v1/tournaments/:id
@@ -1005,6 +1005,8 @@ GET    /api/v1/tournaments/:id/standings      # таблицы и места
 POST   /api/v1/tournaments/:id/tie-decisions  # решение судьи по равенству, ADR-008
 GET    /api/v1/tournaments/:id/results        # публичные результаты
 ```
+
+**Список турниров — календарь и список, ADR-052.** Элемент списка несёт сверх вида турнира `averageRating` (средний рейтинг участников, целое, `null` без участников) и `matchesPlayed` (сыгранные встречи). `order` задаёт порядок по дате старта, при равной дате — по идентификатору: страницы не переставляют турниры одного часа.
 
 ### 7.6. Встречи
 

@@ -6,6 +6,7 @@ import {
   updateRegistrationSchema,
   updateTournamentSchema,
   listTournamentsSchema,
+  tournamentListItemSchema,
 } from './tournament.js';
 import { formatConfigSchema } from './tournament-format.js';
 
@@ -358,5 +359,23 @@ describe('фильтр списка турниров по статусу', () =>
   it('неизвестный статус в списке — отказ, а не молчаливый пропуск', () => {
     expect(listTournamentsSchema.safeParse({ status: 'FINISHED,DONE' }).success).toBe(false);
     expect(listTournamentsSchema.safeParse({ status: '' }).success).toBe(false);
+  });
+});
+
+describe('список турниров: порядок и поля календаря (ADR-052)', () => {
+  it('порядок по умолчанию — по возрастанию даты, как раньше', () => {
+    expect(listTournamentsSchema.parse({}).order).toBe('asc');
+    expect(listTournamentsSchema.parse({ order: 'desc' }).order).toBe('desc');
+    expect(listTournamentsSchema.safeParse({ order: 'newest' }).success).toBe(false);
+  });
+
+  it('элемент списка несёт средний рейтинг и число игр', () => {
+    const shape = tournamentListItemSchema.shape;
+
+    expect(shape).toHaveProperty('averageRating');
+    expect(shape).toHaveProperty('matchesPlayed');
+    expect(shape.averageRating.safeParse(null).success).toBe(true);
+    expect(shape.averageRating.safeParse(344.5).success).toBe(false);
+    expect(shape.matchesPlayed.safeParse(-1).success).toBe(false);
   });
 });

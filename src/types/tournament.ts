@@ -179,6 +179,12 @@ export const listTournamentsSchema = pageQuerySchema.extend({
     .optional(),
   from: z.iso.datetime().optional(),
   to: z.iso.datetime().optional(),
+  /**
+   * Порядок по дате старта — ADR-052. «Прошедшие» в списке читаются от
+   * свежих, а постранично это делает только сервер: переворот страницы на
+   * клиенте дал бы самые старые турниры первыми.
+   */
+  order: z.enum(['asc', 'desc']).default('asc'),
 });
 export type ListTournamentsQuery = z.infer<typeof listTournamentsSchema>;
 
@@ -186,8 +192,9 @@ export type ListTournamentsQuery = z.infer<typeof listTournamentsSchema>;
  * Запрос списка с клиента: статус — один или несколько, в адрес уходит через
  * запятую. Отдельный тип, потому что разобранный запрос несёт массив.
  */
-export type ListTournamentsRequest = Omit<ListTournamentsQuery, 'status'> & {
+export type ListTournamentsRequest = Omit<ListTournamentsQuery, 'status' | 'order'> & {
   readonly status?: TournamentStatus | readonly TournamentStatus[];
+  readonly order?: ListTournamentsQuery['order'];
 };
 
 /** Запись на турнир. Без `playerId` — запись самого себя (ТЗ 4.3). */
@@ -259,3 +266,22 @@ export const registrationViewSchema = z.object({
   player: playerViewSchema,
 });
 export type RegistrationView = z.infer<typeof registrationViewSchema>;
+
+/**
+ * Турнир в списке и календаре — ADR-052, как у RTTF: средний рейтинг
+ * участников и число сыгранных встреч рядом с названием.
+ *
+ * Только в списке: экран зала, офлайн-снимок и результаты несут обычный вид
+ * и считать для них лишнее незачем.
+ */
+export const tournamentListItemSchema = tournamentViewSchema.extend({
+  /**
+   * Средний рейтинг участников, округлённый до целого: это мера силы поля,
+   * а не чей-то рейтинг. У начатого турнира — по рейтингу на старте, у
+   * будущего — по нынешнему рейтингу записанных. `null` — участников нет.
+   */
+  averageRating: z.number().int().nonnegative().nullable(),
+  /** Сыгранные встречи: у будущего турнира ноль. */
+  matchesPlayed: z.number().int().nonnegative(),
+});
+export type TournamentListItemView = z.infer<typeof tournamentListItemSchema>;
