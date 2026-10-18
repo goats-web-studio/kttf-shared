@@ -203,9 +203,18 @@ describe('игрок в ответе', () => {
       coachPlayerId: null,
       coachName: 'Сериков Тимур',
       birthYearOnly: true,
+      lastSeenAt: null,
+      online: false,
     };
 
     expect(playerProfileViewSchema.parse(player)).toEqual(player);
+  });
+
+  it('последнее посещение — только в полном профиле: в снимок консоли оно не едет', () => {
+    expect(playerProfileViewSchema.shape).toHaveProperty('lastSeenAt');
+    expect(playerProfileViewSchema.shape).toHaveProperty('online');
+    expect(playerViewSchema.shape).not.toHaveProperty('lastSeenAt');
+    expect(playerViewSchema.shape).not.toHaveProperty('online');
   });
 });
 

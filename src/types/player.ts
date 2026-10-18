@@ -294,5 +294,16 @@ export const playerProfileViewSchema = playerViewSchema.extend({
    * тренер задан, видно по `coachPlayerId`.
    */
   coachName: z.string().nullable(),
+  /**
+   * Последнее посещение сайта — ADR-050. Пишется не чаще раза в пять минут,
+   * поэтому точнее этого окна не бывает. `null` — у игрока нет аккаунта или
+   * он ещё ни разу не заходил после появления отметки.
+   */
+  lastSeenAt: z.iso.datetime().nullable(),
+  /** «В сети»: посещение за последние пять минут. Считает сервер — часы клиента врут. */
+  online: z.boolean(),
 });
 export type PlayerProfileView = z.infer<typeof playerProfileViewSchema>;
+
+/** Окно «в сети» и шаг записи последнего посещения — одно число (ADR-050). */
+export const ONLINE_WINDOW_MS = 5 * 60 * 1000;
