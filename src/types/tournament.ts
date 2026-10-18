@@ -161,6 +161,12 @@ export const listTournamentsSchema = pageQuerySchema.extend({
   /** Город клуба-организатора. */
   cityId: z.uuid().optional(),
   clubId: z.uuid().optional(),
+  /**
+   * Турниры, куда записан игрок, — «Мои турниры» в кабинете (ADR-048).
+   * Снятые и отклонённые заявки не в счёт. Составы турниров публичны,
+   * поэтому фильтр открыт без входа.
+   */
+  playerId: z.uuid().optional(),
   status: tournamentStatusSchema.optional(),
   from: z.iso.datetime().optional(),
   to: z.iso.datetime().optional(),
