@@ -167,11 +167,28 @@ export const listTournamentsSchema = pageQuerySchema.extend({
    * поэтому фильтр открыт без входа.
    */
   playerId: z.uuid().optional(),
-  status: tournamentStatusSchema.optional(),
+  /**
+   * Статус или несколько через запятую — ADR-051. «Завершён» в календаре —
+   * это и «Завершён», и «Рейтинг начислен»: зрителю промежуточный шаг
+   * обсчёта не нужен, а постраничный список не склеить из двух запросов.
+   */
+  status: z
+    .string()
+    .transform((value) => value.split(',').map((part) => part.trim()))
+    .pipe(z.array(tournamentStatusSchema).min(1))
+    .optional(),
   from: z.iso.datetime().optional(),
   to: z.iso.datetime().optional(),
 });
 export type ListTournamentsQuery = z.infer<typeof listTournamentsSchema>;
+
+/**
+ * Запрос списка с клиента: статус — один или несколько, в адрес уходит через
+ * запятую. Отдельный тип, потому что разобранный запрос несёт массив.
+ */
+export type ListTournamentsRequest = Omit<ListTournamentsQuery, 'status'> & {
+  readonly status?: TournamentStatus | readonly TournamentStatus[];
+};
 
 /** Запись на турнир. Без `playerId` — запись самого себя (ТЗ 4.3). */
 export const registerSchema = z.object({

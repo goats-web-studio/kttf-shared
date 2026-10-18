@@ -5,6 +5,7 @@ import {
   registrationViewSchema,
   updateRegistrationSchema,
   updateTournamentSchema,
+  listTournamentsSchema,
 } from './tournament.js';
 import { formatConfigSchema } from './tournament-format.js';
 
@@ -339,5 +340,23 @@ describe('участник в ответе', () => {
     expect(registrationViewSchema.safeParse({ ...registration, ratingAtStart: 250 }).success).toBe(
       false,
     );
+  });
+});
+
+describe('фильтр списка турниров по статусу', () => {
+  it('один статус — как раньше, но массивом', () => {
+    expect(listTournamentsSchema.parse({ status: 'RUNNING' }).status).toEqual(['RUNNING']);
+  });
+
+  it('несколько через запятую: «Завершён» — это и обсчитанные (ADR-051)', () => {
+    expect(listTournamentsSchema.parse({ status: 'FINISHED,RATED' }).status).toEqual([
+      'FINISHED',
+      'RATED',
+    ]);
+  });
+
+  it('неизвестный статус в списке — отказ, а не молчаливый пропуск', () => {
+    expect(listTournamentsSchema.safeParse({ status: 'FINISHED,DONE' }).success).toBe(false);
+    expect(listTournamentsSchema.safeParse({ status: '' }).success).toBe(false);
   });
 });

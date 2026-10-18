@@ -977,7 +977,7 @@ ADR-047. Отправка открыта всем, токен необязате
 ### 7.5. Турниры
 
 ```
-GET    /api/v1/tournaments           ?cityId&clubId&playerId&status&from&to&page   # playerId — «Мои турниры», ADR-048
+GET    /api/v1/tournaments           ?cityId&clubId&playerId&status&from&to&page   # playerId — «Мои турниры», ADR-048; status — один или через запятую, ADR-051
 POST   /api/v1/tournaments
 GET    /api/v1/tournaments/:id
 PATCH  /api/v1/tournaments/:id
