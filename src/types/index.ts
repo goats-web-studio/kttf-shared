@@ -1,6 +1,7 @@
 export * from './account.js';
 export * from './auth.js';
 export * from './club.js';
+export * from './club-application.js';
 export * from './match.js';
 export * from './media.js';
 export * from './pagination.js';
