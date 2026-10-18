@@ -8,6 +8,7 @@ export * from './pagination.js';
 export * from './place.js';
 export * from './player.js';
 export * from './player-history.js';
+export * from './player-profile.js';
 export * from './results.js';
 export * from './screen.js';
 export * from './stage.js';
