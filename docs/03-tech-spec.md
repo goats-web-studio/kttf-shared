@@ -375,6 +375,7 @@ model Tournament {
   startedAt       DateTime?
   finishedAt      DateTime?
   ratedAt         DateTime?
+  placesAt        DateTime?                   // места записаны в заявки, ADR-048
 
   registrations   Registration[]
   stages          Stage[]
@@ -399,6 +400,8 @@ model Registration {
   isRated      Boolean  @default(true)     // false = вне зачёта
   paidAt       DateTime?
   paymentId    String?
+  place        Int?                        // итоговое место, ADR-048
+  placeTo      Int?                        // конец делённого места: «5–8»
   createdAt    DateTime @default(now())
 
   tournament   Tournament @relation(fields: [tournamentId], references: [id])
@@ -906,8 +909,12 @@ PATCH  /api/v1/players/:id
 GET    /api/v1/players/:id/rating-history   ?from&to
 GET    /api/v1/players/:id/matches          ?page&limit
 GET    /api/v1/players/:id/head-to-head/:opponentId
+GET    /api/v1/players/:id/summary          ?period=QUARTER|HALF|YEAR|ALL
+GET    /api/v1/players/:id/tournaments      ?page&limit
 POST   /api/v1/players                      # создание организатором
 ```
+
+**Сводка и результаты профиля — ADR-048.** `summary` — место в рейтинге страны, максимальный рейтинг, турниры, победы и поражения, первый турнир, частый клуб, пять лучших побед и призовые места; место, максимум, первый турнир и награды — за всё время, остальное — за период. `tournaments` — турниры игрока свежими сверху: место (`place`–`placeTo` у делённого), участников, рейтинг до и после, изменение и встречи с кругом сетки от финала (`roundFromFinal`, `0` — финал).
 
 **Полную дату рождения видят сам игрок и организаторы его клуба** — ADR-037. Остальным она не приходит вовсе: маршрут берёт токен необязательным, а скрытая дата неотличима от незаполненной.
 
