@@ -974,6 +974,36 @@ PATCH  /api/v1/admin/club-applications/:id    { status: NEW | DONE }
 
 ADR-047. Отправка открыта всем, токен необязателен: вошедший привязывается к заявке. `website` — ловушка для ботов: заполнена — ответ тот же 204, заявка не сохраняется. Больше пяти заявок в час с одного адреса — `RATE_LIMITED` (429); адрес — последний элемент `X-Forwarded-For` от Caddy, в базе только его HMAC. `DONE` ставит `handledAt`, возврат в `NEW` его снимает.
 
+### 7.4в. Тренеры и тренировки
+
+```
+GET    /api/v1/coaches                          ?search&cityId&language&page&limit   # опубликованные
+GET    /api/v1/coaches/by-slug/:slug            # публичная; непубличную — владелец и администратор
+GET    /api/v1/trainings                        ?kind&audience&age&place&cityId&priceTo&language&page&limit
+POST   /api/v1/coaches/:id/events               { kind, source } → 204
+GET    /api/v1/coaches/:id/credentials/:credentialId/file   # скан документа
+
+POST   /api/v1/coaches                          # своя страница из профиля игрока, DRAFT
+GET    /api/v1/coaches/:id
+PATCH  /api/v1/coaches/:id                      # null — стереть
+PUT    /api/v1/coaches/:id/services             { services }
+PUT    /api/v1/coaches/:id/credentials          { credentials }   # id строки сохраняет отметку «проверено»
+PUT    /api/v1/coaches/:id/achievements         { achievements }
+POST   /api/v1/coaches/:id/reviewed             # «Всё актуально»
+POST   /api/v1/coaches/:id/submit               # на проверку: COACH_INCOMPLETE, COACH_STATUS_INVALID
+GET    /api/v1/coaches/:id/stats                ?days
+POST   /api/v1/files/coaches/:id                multipart file → { url, width, height }
+POST   /api/v1/files/coach-docs/:id             multipart file → { url }
+
+GET    /api/v1/admin/coaches                    ?status&page&limit
+POST   /api/v1/admin/coaches/:id/approve
+POST   /api/v1/admin/coaches/:id/reject         { reason }
+PATCH  /api/v1/admin/coaches/:id/hidden         { hidden, reason? }
+PATCH  /api/v1/admin/coaches/:id/credentials/:credentialId   { verified }
+```
+
+ADR-059, `docs/11`. Владелец страницы — `Coach.userId`; чужой получает `FORBIDDEN`, администратор правит любую (в кабинете — `/cabinet/coach?id=`). Маршруты администратора отвечают `CoachApplicationView`. Общая выдача `GET /files/:folder/:name` папку `coach-docs` не отдаёт. Публичны только `APPROVED` и не скрытые. Схемы — `src/types/coach.ts`.
+
 ### 7.5. Турниры
 
 ```
