@@ -72,6 +72,9 @@ export type Color = (typeof COLORS)[number];
 export const HANDLES = ['FL', 'ST', 'AN', 'CO', 'FS', 'CS', 'JP'] as const;
 export type Handle = (typeof HANDLES)[number];
 
+export const ATTRIBUTE_UNITS = ['g', 'mm', 'deg', 'kg', 'pcs', 'l'] as const;
+export type AttributeUnit = (typeof ATTRIBUTE_UNITS)[number];
+
 /**
  * Описание характеристики.
  *
@@ -95,7 +98,7 @@ export type AttributeDef =
       readonly kind: 'number' | 'numbers';
       readonly min: number;
       readonly max: number;
-      readonly unit?: 'g' | 'mm' | 'deg' | 'kg' | 'pcs' | 'l';
+      readonly unit?: AttributeUnit;
       readonly brandScale?: true;
       readonly filter: boolean;
     }
@@ -213,7 +216,15 @@ export const PRODUCT_ATTRIBUTES: Readonly<Record<ProductCategory, readonly Attri
     { key: 'playSize', kind: 'text', max: 60, filter: false },
     { key: 'foldedSize', kind: 'text', max: 60, filter: false },
   ],
-  OTHER: [],
+  /** Всё остальное: у RTTF скрытые «Аксессуары», «Костюмы», «Полотенца», а ещё клей и сетки. */
+  OTHER: [
+    {
+      key: 'otherType',
+      kind: 'enum',
+      values: ['ACCESSORY', 'GLUE', 'NET', 'ROBOT', 'SUIT', 'TOWEL', 'CARE'],
+      filter: true,
+    },
+  ],
 };
 
 /**

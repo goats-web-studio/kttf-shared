@@ -95,6 +95,9 @@ export const CATALOG_IMAGE_PATH_PATTERN =
  * Ширины картинки товара. 240 — карточка в плитке, 640 — страница товара,
  * 1280 — во весь экран. Варианты лежат рядом с суффиксом, как у клуба.
  */
+/** Потолок файла фото товара и логотипа: как у картинок клуба — сервер всё равно пережимает. */
+export const CATALOG_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+
 export const CATALOG_IMAGE_WIDTHS = [240, 640, 1280] as const;
 export type CatalogImageWidth = (typeof CATALOG_IMAGE_WIDTHS)[number];
 
@@ -271,6 +274,17 @@ export const productViewSchema = productListItemViewSchema.omit({ image: true })
 });
 export type ProductView = z.infer<typeof productViewSchema>;
 
+/** Строка списка администратора: видны и скрытые, и непроверенные. */
+export const adminProductListItemViewSchema = productListItemViewSchema.extend({
+  hidden: z.boolean(),
+  status: productStatusSchema,
+});
+export type AdminProductListItemView = z.infer<typeof adminProductListItemViewSchema>;
+
+/** Товар для правки — `GET /admin/catalog/products/:id`, в том числе скрытый. */
+export const adminProductViewSchema = productViewSchema.extend({ hidden: z.boolean() });
+export type AdminProductView = z.infer<typeof adminProductViewSchema>;
+
 /** Порядок фото: полный список идентификаторов товара. */
 export const reorderProductImagesSchema = z.object({
   ids: z
@@ -279,8 +293,10 @@ export const reorderProductImagesSchema = z.object({
     .max(PRODUCT_IMAGES_MAX)
     .refine((list) => new Set(list).size === list.length, { message: 'Фото повторяется' }),
 });
+export type ReorderProductImagesInput = z.infer<typeof reorderProductImagesSchema>;
 
 export const setProductHiddenSchema = z.object({ hidden: z.boolean() });
+export type SetProductHiddenInput = z.infer<typeof setProductHiddenSchema>;
 
 // ---------- импорт ----------
 
@@ -325,6 +341,7 @@ export const IMPORT_BATCH_MAX = 50;
 export const importProductsSchema = z.object({
   rows: z.array(z.unknown()).min(1).max(IMPORT_BATCH_MAX),
 });
+export type ImportProductsInput = z.infer<typeof importProductsSchema>;
 
 /** Итог строки: заведён, обновлён или отвергнут с причиной. */
 export const importRowResultSchema = z.object({
