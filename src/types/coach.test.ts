@@ -17,7 +17,8 @@ import {
   setCoachAchievementsSchema,
   setCoachCredentialsSchema,
   setCoachHiddenSchema,
-  setCoachServicesSchema,
+  setClubTrainingsSchema,
+  setCoachTrainingsSchema,
   updateCoachSchema,
 } from './coach.js';
 
@@ -29,6 +30,7 @@ const group = {
   audiences: ['KIDS'],
   kidsFromAge: 6,
   place: 'CLUB',
+  clubId: OTHER,
   title: 'Детская группа',
   schedule: 'пн, ср, пт 18:00–19:30',
   priceKzt: 20_000,
@@ -68,42 +70,81 @@ describe('страница тренера', () => {
 });
 
 describe('тренировки', () => {
-  it('детская группа с возрастом и ценой', () => {
-    expect(setCoachServicesSchema.safeParse({ services: [group] }).success).toBe(true);
+  const coachOf = (rows: unknown[]) =>
+    setCoachTrainingsSchema.safeParse({ trainings: rows }).success;
+
+  it('детская группа в клубе KTTF с возрастом и ценой', () => {
+    expect(coachOf([group])).toBe(true);
   });
 
   it('цена необязательна — «по договорённости»', () => {
     const free: Partial<typeof group> = { ...group };
     delete free.priceKzt;
 
-    expect(setCoachServicesSchema.safeParse({ services: [free] }).success).toBe(true);
-    expect(
-      setCoachServicesSchema.safeParse({ services: [{ ...group, priceKzt: null }] }).success,
-    ).toBe(true);
+    expect(coachOf([free])).toBe(true);
+    expect(coachOf([{ ...group, priceKzt: null }])).toBe(true);
   });
 
   it('возраст ребёнка — только у детей и подростков', () => {
     const adults = { ...group, kind: 'GROUP', audiences: ['AMATEURS'] };
 
-    expect(setCoachServicesSchema.safeParse({ services: [adults] }).success).toBe(false);
-    expect(
-      setCoachServicesSchema.safeParse({ services: [{ ...adults, kidsFromAge: null }] }).success,
-    ).toBe(true);
-    expect(
-      setCoachServicesSchema.safeParse({ services: [{ ...group, audiences: ['TEENS'] }] }).success,
-    ).toBe(true);
+    expect(coachOf([adults])).toBe(false);
+    expect(coachOf([{ ...adults, kidsFromAge: null }])).toBe(true);
+    expect(coachOf([{ ...group, audiences: ['TEENS'] }])).toBe(true);
   });
 
   it('хотя бы одна аудитория', () => {
-    expect(
-      setCoachServicesSchema.safeParse({ services: [{ ...group, audiences: [] }] }).success,
-    ).toBe(false);
+    expect(coachOf([{ ...group, audiences: [] }])).toBe(false);
   });
 
   it('строк не больше защитного предела', () => {
-    const services = Array.from({ length: COACH_PLAN_LIMITS.PRO.services + 1 }, () => group);
+    expect(coachOf(Array.from({ length: COACH_PLAN_LIMITS.PRO.trainings + 1 }, () => group))).toBe(
+      false,
+    );
+  });
 
-    expect(setCoachServicesSchema.safeParse({ services }).success).toBe(false);
+  it('в клубе — клуб KTTF или зал с адресом, ровно одно', () => {
+    const venue = { ...group, clubId: null, venueName: 'СК «Арман»', venueAddress: 'пр. Абая, 10' };
+
+    expect(coachOf([venue])).toBe(true);
+    expect(coachOf([{ ...group, clubId: undefined }])).toBe(false);
+    expect(coachOf([{ ...venue, clubId: OTHER }])).toBe(false);
+    expect(coachOf([{ ...venue, venueAddress: null }])).toBe(false);
+  });
+
+  it('у выезда и онлайна места нет', () => {
+    const visit = { ...group, place: 'VISIT', clubId: undefined };
+
+    expect(coachOf([visit])).toBe(true);
+    expect(coachOf([{ ...visit, clubId: OTHER }])).toBe(false);
+    expect(coachOf([{ ...visit, venueAddress: 'пр. Абая, 10' }])).toBe(false);
+  });
+
+  it('одна тренировка дважды — отказ', () => {
+    expect(
+      coachOf([
+        { ...group, id: ID },
+        { ...group, id: ID },
+      ]),
+    ).toBe(false);
+    expect(coachOf([{ ...group, id: ID }, group])).toBe(true);
+  });
+
+  it('тренировка клуба — с тренером или без', () => {
+    const own: Partial<typeof group> = { ...group };
+    delete own.place;
+    delete own.clubId;
+    const clubOf = (rows: unknown[]) =>
+      setClubTrainingsSchema.safeParse({ trainings: rows }).success;
+
+    expect(clubOf([own, { ...own, coachId: ID }])).toBe(true);
+    expect(clubOf([{ ...own, audiences: ['AMATEURS'] }])).toBe(false);
+    expect(
+      clubOf([
+        { ...own, id: ID },
+        { ...own, id: ID },
+      ]),
+    ).toBe(false);
   });
 });
 
@@ -161,8 +202,8 @@ describe('квалификация', () => {
 
 describe('заявка', () => {
   it('отправить нельзя без города и тренировки', () => {
-    expect(coachMissing({ city: null, services: [] })).toEqual(['city', 'services']);
-    expect(coachMissing({ city: { id: ID }, services: [group] })).toEqual([]);
+    expect(coachMissing({ city: null, trainings: [] })).toEqual(['city', 'trainings']);
+    expect(coachMissing({ city: { id: ID }, trainings: [group] })).toEqual([]);
   });
 
   it('отправляются черновик и отклонённая', () => {

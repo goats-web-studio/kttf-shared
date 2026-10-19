@@ -979,14 +979,19 @@ ADR-047. Отправка открыта всем, токен необязате
 ```
 GET    /api/v1/coaches                          ?search&cityId&language&page&limit   # опубликованные
 GET    /api/v1/coaches/by-slug/:slug            # публичная; непубличную — владелец и администратор
-GET    /api/v1/trainings                        ?kind&audience&age&place&cityId&priceTo&language&page&limit
+GET    /api/v1/trainings                        ?kind&audience&age&place&clubId&cityId&priceTo&language&page&limit   # блоками по месту
+GET    /api/v1/clubs/:id/trainings              # свои и подтверждённые тренерские
+GET    /api/v1/clubs/:id/trainings/manage       # OWNER, ORGANIZER: свои, входящие, подтверждённые
+PUT    /api/v1/clubs/:id/trainings              { trainings }   # OWNER, ORGANIZER
+POST   /api/v1/trainings/:id/confirm            # вторая сторона: клуб или тренер
+POST   /api/v1/trainings/:id/decline            # отказ или разрыв связи
 POST   /api/v1/coaches/:id/events               { kind, source } → 204
 GET    /api/v1/coaches/:id/credentials/:credentialId/file   # скан документа
 
 POST   /api/v1/coaches                          # своя страница из профиля игрока, DRAFT
 GET    /api/v1/coaches/:id
 PATCH  /api/v1/coaches/:id                      # null — стереть
-PUT    /api/v1/coaches/:id/services             { services }
+PUT    /api/v1/coaches/:id/trainings            { trainings }   # свои; «в клубе» — clubId или venueName+venueAddress
 PUT    /api/v1/coaches/:id/credentials          { credentials }   # id строки сохраняет отметку «проверено»
 PUT    /api/v1/coaches/:id/achievements         { achievements }
 POST   /api/v1/coaches/:id/reviewed             # «Всё актуально»

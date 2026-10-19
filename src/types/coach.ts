@@ -106,7 +106,7 @@ export type CoachPlan = z.infer<typeof coachPlanSchema>;
 export const COACH_PLANS_ENABLED = false;
 
 export interface CoachPlanLimits {
-  readonly services: number;
+  readonly trainings: number;
   readonly credentials: number;
   readonly achievements: number;
   /** Глубина статистики в днях. */
@@ -115,8 +115,8 @@ export interface CoachPlanLimits {
 
 /** Черновик лимитов. Числа обсуждаются с владельцем до включения тарифов. */
 export const COACH_PLAN_LIMITS: Readonly<Record<CoachPlan, CoachPlanLimits>> = {
-  FREE: { services: 5, credentials: 5, achievements: 10, statsDays: 30 },
-  PRO: { services: 20, credentials: 20, achievements: 40, statsDays: 365 },
+  FREE: { trainings: 5, credentials: 5, achievements: 10, statsDays: 30 },
+  PRO: { trainings: 20, credentials: 20, achievements: 40, statsDays: 365 },
 };
 
 /** Лимиты, которые действуют сейчас: план тренера или, пока тарифы выключены, защитный предел. */
@@ -229,59 +229,248 @@ export type UpdateCoachInput = z.infer<typeof updateCoachSchema>;
 
 // ---------------------------------------------------------------- тренировки
 
+/** Игрок, на чьём профиле стоит страница, — для шапки и карточек. */
+export const coachPlayerRefSchema = z.object({
+  id: z.uuid(),
+  lastName: z.string(),
+  firstName: z.string(),
+  middleName: z.string().nullable(),
+  /** Фото из профиля игрока. Своё фото тренера — `CoachView.photoUrl`. */
+  photoUrl: z.string().nullable(),
+  /** Строкой, как везде (ADR-014). */
+  rating: z.string(),
+  isProvisional: z.boolean(),
+  city: cityRefSchema,
+});
+export type CoachPlayerRef = z.infer<typeof coachPlayerRefSchema>;
+
+/**
+ * Тренировка — своя сущность (решение владельца от 20.10.2026): её заводит
+ * тренер на своей странице или клуб на своей. Тренировка «в клубе» обязана
+ * назвать место: клуб KTTF или, если зал не в KTTF, название и адрес.
+ *
+ * Вторая сторона подтверждает связь: тренер указал клуб — подтверждает клуб
+ * (OWNER или ORGANIZER), клуб указал тренера — подтверждает тренер. До
+ * подтверждения тренировка видна у автора, но без второй стороны: у клуба —
+ * без тренера, у тренера — не публикуется вовсе, пока клуб не ответил.
+ * Разорвать связь может любая сторона.
+ */
+export const TRAINING_AUTHORS = ['COACH', 'CLUB'] as const;
+export const trainingAuthorSchema = z.enum(TRAINING_AUTHORS);
+export type TrainingAuthor = z.infer<typeof trainingAuthorSchema>;
+
+/**
+ * Связь со второй стороной: `NONE` — второй стороны нет (выезд, онлайн,
+ * зал по адресу, клубная тренировка без тренера); `PENDING` — ждёт ответа;
+ * `CONFIRMED`; `DECLINED` — вторая сторона отказала или разорвала связь.
+ */
+export const TRAINING_LINKS = ['NONE', 'PENDING', 'CONFIRMED', 'DECLINED'] as const;
+export const trainingLinkSchema = z.enum(TRAINING_LINKS);
+export type TrainingLink = z.infer<typeof trainingLinkSchema>;
+
 /** Возраст ребёнка, с которого берут: от трёх лет до семнадцати. */
 const kidsAge = z.number().int().min(3).max(17);
 
-export const coachServiceInputSchema = z
-  .object({
-    kind: trainingKindSchema,
-    audiences: uniqueList(trainingAudienceSchema, TRAINING_AUDIENCES.length).min(1),
-    /** «Дети с 6 лет» — только у детской или подростковой аудитории. */
-    kidsFromAge: kidsAge.nullable().optional(),
-    place: trainingPlaceSchema,
-    title: text(100),
-    /** Расписание строкой: «пн, ср, пт 18:00–19:30». */
-    schedule: text(200).nullable().optional(),
-    /** Целые тенге. Без цены — «по договорённости». */
-    priceKzt: z.number().int().min(0).max(PRICE_KZT_MAX).nullable().optional(),
-    unit: priceUnitSchema,
-    /** Примечание; у места «клуб» — название зала и адрес, пока нет штаба (T2). */
-    note: text(200).nullable().optional(),
-  })
-  .superRefine((value, ctx) => {
-    const forChildren = value.audiences.some((audience) =>
-      (CHILD_AUDIENCES as readonly TrainingAudience[]).includes(audience),
-    );
+/** Поля тренировки, общие у тренера и клуба. */
+const trainingFields = {
+  /** Строка списка: сохраняет тренировку и её связь со второй стороной. */
+  id: z.uuid().optional(),
+  kind: trainingKindSchema,
+  audiences: uniqueList(trainingAudienceSchema, TRAINING_AUDIENCES.length).min(1),
+  /** «Дети с 6 лет» — только у детской или подростковой аудитории. */
+  kidsFromAge: kidsAge.nullable().optional(),
+  title: text(100),
+  /** Расписание строкой: «пн, ср, пт 18:00–19:30». */
+  schedule: text(200).nullable().optional(),
+  /** Целые тенге. Без цены — «по договорённости». */
+  priceKzt: z.number().int().min(0).max(PRICE_KZT_MAX).nullable().optional(),
+  unit: priceUnitSchema,
+  note: text(200).nullable().optional(),
+};
 
-    if (value.kidsFromAge !== undefined && value.kidsFromAge !== null && !forChildren) {
+function kidsAgeForChildren(
+  value: {
+    readonly audiences: readonly TrainingAudience[];
+    readonly kidsFromAge?: number | null | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const forChildren = value.audiences.some((audience) =>
+    (CHILD_AUDIENCES as readonly TrainingAudience[]).includes(audience),
+  );
+
+  if (value.kidsFromAge !== undefined && value.kidsFromAge !== null && !forChildren) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['kidsFromAge'],
+      message: 'Возраст ребёнка — только у тренировки для детей или подростков',
+    });
+  }
+}
+
+/**
+ * Место тренировки тренера. «В клубе» — ровно одно из двух: клуб KTTF
+ * (`clubId`, клуб подтверждает) или зал вне KTTF — название и адрес.
+ * У выезда и онлайна места нет.
+ */
+function placeIsNamed(
+  value: {
+    readonly place: TrainingPlace;
+    readonly clubId?: string | null | undefined;
+    readonly venueName?: string | null | undefined;
+    readonly venueAddress?: string | null | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const club = value.clubId !== undefined && value.clubId !== null;
+  const venue = value.venueName !== undefined && value.venueName !== null;
+  const address = value.venueAddress !== undefined && value.venueAddress !== null;
+
+  if (value.place !== 'CLUB') {
+    if (club || venue || address) {
       ctx.addIssue({
         code: 'custom',
-        path: ['kidsFromAge'],
-        message: 'Возраст ребёнка — только у тренировки для детей или подростков',
+        path: ['place'],
+        message: 'Клуб или зал указывается только у тренировки в клубе',
       });
     }
+    return;
+  }
+
+  if (club === venue) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['clubId'],
+      message: 'Тренировка в клубе: выберите клуб KTTF или впишите зал с адресом',
+    });
+    return;
+  }
+
+  if (venue !== address) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['venueAddress'],
+      message: 'Зал вне KTTF — с названием и адресом',
+    });
+  }
+}
+
+export const coachTrainingInputSchema = z
+  .object({
+    ...trainingFields,
+    place: trainingPlaceSchema,
+    /** Клуб KTTF — для места «в клубе»; клуб подтверждает. */
+    clubId: z.uuid().nullable().optional(),
+    /** Зал вне KTTF: название и адрес. */
+    venueName: text(100).nullable().optional(),
+    venueAddress: text(200).nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    kidsAgeForChildren(value, ctx);
+    placeIsNamed(value, ctx);
   });
-export type CoachServiceInput = z.infer<typeof coachServiceInputSchema>;
+export type CoachTrainingInput = z.infer<typeof coachTrainingInputSchema>;
 
-/** Тренировки целиком: порядок строк — порядок в массиве, как прайс клуба. */
-export const setCoachServicesSchema = z.object({
-  services: z.array(coachServiceInputSchema).max(MAX.services),
+/** Повтор `id` в списке — две строки об одной тренировке. */
+function idsUnique(list: readonly { readonly id?: string | undefined }[]): boolean {
+  const ids = list.flatMap((row) => (row.id === undefined ? [] : [row.id]));
+
+  return new Set(ids).size === ids.length;
+}
+
+/**
+ * Свои тренировки тренера целиком: порядок — порядок в массиве. Строка
+ * с `id` сохраняет тренировку; связь с клубом сохраняется, если клуб не
+ * сменился, иначе снова ждёт подтверждения. Клубные тренировки, где тренер
+ * подтвердил участие, этим списком не правятся — их ведёт клуб.
+ */
+export const setCoachTrainingsSchema = z.object({
+  trainings: z
+    .array(coachTrainingInputSchema)
+    .max(MAX.trainings)
+    .refine(idsUnique, { message: 'Тренировка повторяется' }),
 });
-export type SetCoachServicesInput = z.infer<typeof setCoachServicesSchema>;
+export type SetCoachTrainingsInput = z.infer<typeof setCoachTrainingsSchema>;
 
-export const coachServiceViewSchema = z.object({
+/** Тренировки клуба: место — сам клуб. */
+export const CLUB_TRAININGS_MAX = 30;
+
+export const clubTrainingInputSchema = z
+  .object({
+    ...trainingFields,
+    /** Тренер со страницей (`Coach.id`); тренер подтверждает. Без тренера — тренировка клуба. */
+    coachId: z.uuid().nullable().optional(),
+  })
+  .superRefine(kidsAgeForChildren);
+export type ClubTrainingInput = z.infer<typeof clubTrainingInputSchema>;
+
+/** Тренировки клуба целиком; смена тренера у строки — снова ждёт подтверждения. */
+export const setClubTrainingsSchema = z.object({
+  trainings: z
+    .array(clubTrainingInputSchema)
+    .max(CLUB_TRAININGS_MAX)
+    .refine(idsUnique, { message: 'Тренировка повторяется' }),
+});
+export type SetClubTrainingsInput = z.infer<typeof setClubTrainingsSchema>;
+
+/** Клуб в тренировке — для шапки блока и ссылки. */
+export const trainingClubRefSchema = z.object({
   id: z.uuid(),
+  name: z.string(),
+  logoUrl: z.string().nullable(),
+  address: z.string().nullable(),
+  city: cityRefSchema,
+});
+export type TrainingClubRef = z.infer<typeof trainingClubRefSchema>;
+
+/** Тренер в тренировке — для строки «тренер» и ссылки. */
+export const trainingCoachRefSchema = z.object({
+  id: z.uuid(),
+  slug: z.string(),
+  player: coachPlayerRefSchema,
+  photoUrl: z.string().nullable(),
+});
+export type TrainingCoachRef = z.infer<typeof trainingCoachRefSchema>;
+
+export const trainingVenueSchema = z.object({ name: z.string(), address: z.string() });
+export type TrainingVenue = z.infer<typeof trainingVenueSchema>;
+
+/**
+ * Тренировка в ответах. Публично вторая сторона видна только при
+ * `CONFIRMED`: у клубной тренировки без подтверждения `coach` — `null`,
+ * неподтверждённая тренировка тренера в клубе публично не отдаётся вовсе.
+ * Автору и второй стороне — как есть, со статусом связи.
+ */
+export const trainingViewSchema = z.object({
+  id: z.uuid(),
+  author: trainingAuthorSchema,
   kind: trainingKindSchema,
   audiences: z.array(trainingAudienceSchema),
   kidsFromAge: z.number().int().nullable(),
   place: trainingPlaceSchema,
+  club: trainingClubRefSchema.nullable(),
+  venue: trainingVenueSchema.nullable(),
+  coach: trainingCoachRefSchema.nullable(),
+  link: trainingLinkSchema,
   title: z.string(),
   schedule: z.string().nullable(),
   priceKzt: z.number().int().nullable(),
   unit: priceUnitSchema,
   note: z.string().nullable(),
 });
-export type CoachServiceView = z.infer<typeof coachServiceViewSchema>;
+export type TrainingView = z.infer<typeof trainingViewSchema>;
+
+/**
+ * Тренировки клуба в кабинете — `GET /clubs/:id/trainings/manage`: свои,
+ * входящие от тренеров (ждут ответа клуба) и подтверждённые тренерские.
+ * Публично клуб отдаёт `GET /clubs/:id/trainings` — свои и подтверждённые.
+ */
+export const clubTrainingsManageViewSchema = z.object({
+  trainings: z.array(trainingViewSchema),
+  requests: z.array(trainingViewSchema),
+  coachTrainings: z.array(trainingViewSchema),
+});
+export type ClubTrainingsManageView = z.infer<typeof clubTrainingsManageViewSchema>;
 
 // ---------------------------------------------------------------- квалификация
 
@@ -366,21 +555,6 @@ export type CoachAchievementView = z.infer<typeof coachAchievementViewSchema>;
 
 // ---------------------------------------------------------------- вид страницы
 
-/** Игрок, на чьём профиле стоит страница, — для шапки и карточек. */
-export const coachPlayerRefSchema = z.object({
-  id: z.uuid(),
-  lastName: z.string(),
-  firstName: z.string(),
-  middleName: z.string().nullable(),
-  /** Фото из профиля игрока. Своё фото тренера — `CoachView.photoUrl`. */
-  photoUrl: z.string().nullable(),
-  /** Строкой, как везде (ADR-014). */
-  rating: z.string(),
-  isProvisional: z.boolean(),
-  city: cityRefSchema,
-});
-export type CoachPlayerRef = z.infer<typeof coachPlayerRefSchema>;
-
 export const coachViewSchema = z.object({
   id: z.uuid(),
   slug: z.string(),
@@ -411,7 +585,13 @@ export const coachViewSchema = z.object({
   coachCategory: coachCategorySchema.nullable(),
   refereeCategory: z.string().nullable(),
   education: z.string().nullable(),
-  services: z.array(coachServiceViewSchema),
+  /**
+   * Тренировки страницы: свои и клубные, где тренер подтвердил участие.
+   * Своя — `author: COACH`, клубная — `CLUB`.
+   */
+  trainings: z.array(trainingViewSchema),
+  /** Входящие от клубов, ждут ответа тренера. Только владельцу и администратору, иначе пусто. */
+  trainingRequests: z.array(trainingViewSchema),
   credentials: z.array(coachCredentialViewSchema),
   achievements: z.array(coachAchievementViewSchema),
   /** Игроков, выбравших его тренером в анкете (ADR-035). Младшие 14 — тоже только числом. */
@@ -431,18 +611,18 @@ export function isCoachPublic(coach: {
 }
 
 /** Чего не хватает для отправки на проверку (ADR-059, риск «пустые страницы»). */
-export const COACH_REQUIREMENTS = ['city', 'services'] as const;
+export const COACH_REQUIREMENTS = ['city', 'trainings'] as const;
 export type CoachRequirement = (typeof COACH_REQUIREMENTS)[number];
 
 /** Список недостающего; пустой — можно отправлять. Одно правило на кнопку и сервер. */
 export function coachMissing(coach: {
   readonly city: unknown;
-  readonly services: readonly unknown[];
+  readonly trainings: readonly unknown[];
 }): CoachRequirement[] {
   const missing: CoachRequirement[] = [];
 
   if (coach.city === null) missing.push('city');
-  if (coach.services.length === 0) missing.push('services');
+  if (coach.trainings.length === 0) missing.push('trainings');
 
   return missing;
 }
@@ -484,7 +664,9 @@ export const coachListItemViewSchema = z.object({
   coachingSince: z.number().int().nullable(),
   /** Самая низкая цена среди тренировок с ценой — «от 8 000 ₸». */
   minPriceKzt: z.number().int().nullable(),
-  servicesCount: z.number().int().nonnegative(),
+  trainingsCount: z.number().int().nonnegative(),
+  /** Клубы KTTF, где у тренера подтверждённые тренировки. */
+  clubs: z.array(trainingClubRefSchema.pick({ id: true, name: true })),
   studentsCount: z.number().int().nonnegative(),
   profileReviewedAt: z.iso.datetime().nullable(),
 });
@@ -492,8 +674,9 @@ export type CoachListItemView = z.infer<typeof coachListItemViewSchema>;
 
 /**
  * Тренировки — `GET /trainings`, раздел «Тренировки» (`docs/11` 5.2).
- * Только тренировки опубликованных страниц. Порядок — по свежести страницы,
- * внутри страницы — как расставил тренер.
+ * Публичные тренировки блоками по месту: клуб KTTF, зал вне KTTF, затем
+ * «выезд и онлайн» одним блоком последним. Страница считает блоки, а не
+ * тренировки: блок клуба не рвётся между страницами.
  */
 export const listTrainingsSchema = pageQuerySchema.extend({
   kind: commaSeparated
@@ -511,10 +694,13 @@ export const listTrainingsSchema = pageQuerySchema.extend({
   place: commaSeparated
     .pipe(z.array(trainingPlaceSchema).min(1).max(TRAINING_PLACES.length))
     .optional(),
-  /** Город страницы тренера. */
+  /** Конкретный клуб KTTF. */
+  clubId: z.uuid().optional(),
+  /** Город: клуба у клубной тренировки, иначе страницы тренера. */
   cityId: commaSeparated.pipe(z.array(z.uuid()).min(1).max(20)).optional(),
   /** «Цена до», включительно. Тренировки без цены под такой фильтр не попадают. */
   priceTo: z.coerce.number().int().min(0).max(PRICE_KZT_MAX).optional(),
+  /** Язык тренера; у клубной тренировки без тренера фильтр не проверить — она не попадает. */
   language: coachLanguageSchema.optional(),
 });
 export type ListTrainingsQuery = z.infer<typeof listTrainingsSchema>;
@@ -529,19 +715,21 @@ export type ListTrainingsRequest = Omit<
   readonly cityId?: string | readonly string[];
 };
 
-/** Карточка тренировки: сама тренировка и её тренер. */
-export const trainingListItemViewSchema = coachServiceViewSchema.extend({
-  coach: coachListItemViewSchema.pick({
-    id: true,
-    slug: true,
-    player: true,
-    photoUrl: true,
-    city: true,
-    languages: true,
-    studentsCount: true,
-  }),
+/** Вид блока: клуб KTTF, зал вне KTTF, выезд и онлайн. */
+export const TRAINING_GROUP_KINDS = ['CLUB', 'VENUE', 'ANYWHERE'] as const;
+export const trainingGroupKindSchema = z.enum(TRAINING_GROUP_KINDS);
+export type TrainingGroupKind = z.infer<typeof trainingGroupKindSchema>;
+
+/** Блок списка: место и его тренировки по фильтрам запроса. */
+export const trainingGroupViewSchema = z.object({
+  kind: trainingGroupKindSchema,
+  /** У блока клуба. */
+  club: trainingClubRefSchema.nullable(),
+  /** У блока зала вне KTTF. */
+  venue: trainingVenueSchema.nullable(),
+  trainings: z.array(trainingViewSchema),
 });
-export type TrainingListItemView = z.infer<typeof trainingListItemViewSchema>;
+export type TrainingGroupView = z.infer<typeof trainingGroupViewSchema>;
 
 // ---------------------------------------------------------------- администратор
 
