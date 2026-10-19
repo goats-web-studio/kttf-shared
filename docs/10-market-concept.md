@@ -194,13 +194,10 @@ model ProductImage {
 ### 4.2. Справочник в профилях — M1.2
 
 ```prisma
-model PlayerEquipment {
-  playerId  String
-  slot      EquipmentSlot   // BLADE RUBBER_FH RUBBER_BH
-  productId String
-  since     DateTime @default(now())
-  @@id([playerId, slot])
-}
+// Player — три ссылки на товар рядом со строками ADR-035
+bladeProductId          String?   // товар BLADE
+rubberForehandProductId String?   // товар RUBBER
+rubberBackhandProductId String?   // товар RUBBER
 
 model ClubTable {
   clubId    String
@@ -210,7 +207,7 @@ model ClubTable {
 }
 ```
 
-Строки `Player.blade`, `rubberForehand`, `rubberBackhand` (ADR-035) остаются для того, чего нет в каталоге. Администратор видит несопоставленные строки и связывает их с товарами — так строки становятся справочником, как и задумывал ADR-035. `Club.tableBrand` остаётся до переноса и потом не показывается.
+Инвентарь — три ссылки в самой анкете, а не отдельная таблица: слотов ровно три, «кто играет» становится обычным условием списка игроков. Строки `Player.blade`, `rubberForehand`, `rubberBackhand` (ADR-035) остаются для того, чего нет в каталоге. Администратор видит несопоставленные строки и связывает их с товарами — так строки становятся справочником, как и задумывал ADR-035. `Club.tableBrand` остаётся до переноса и потом не показывается.
 
 ### 4.3. Характеристики — `Json` со схемой в общем коде
 

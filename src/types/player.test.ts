@@ -201,6 +201,9 @@ describe('игрок в ответе', () => {
       blade: 'Butterfly Lin Gaoyuan ALC',
       rubberForehand: 'Nittaku Hurricane PRO 3',
       rubberBackhand: 'DHS Hurricane 8 Soft',
+      bladeProduct: null,
+      rubberForehandProduct: null,
+      rubberBackhandProduct: null,
       bio: 'hate tensor, love sticky',
       coachPlayerId: null,
       coachName: 'Сериков Тимур',
@@ -279,10 +282,20 @@ describe('список игроков — ADR-054', () => {
       isProvisional: true,
       createdAt: '2026-08-29T00:00:00.000Z',
     };
-    expect(playerListItemSchema.safeParse({ ...item, ratingUpdatedAt: null }).success).toBe(true);
+    const equipment = {
+      blade: { label: 'Tibhar E. Lebesson', slug: 'tibhar-e-lebesson' },
+      rubberForehand: { label: 'Тенерджи 05', slug: null },
+      rubberBackhand: null,
+    };
     expect(
-      playerListItemSchema.safeParse({ ...item, ratingUpdatedAt: '2026-10-19T10:00:00.000Z' })
-        .success,
+      playerListItemSchema.safeParse({ ...item, ...equipment, ratingUpdatedAt: null }).success,
+    ).toBe(true);
+    expect(
+      playerListItemSchema.safeParse({
+        ...item,
+        ...equipment,
+        ratingUpdatedAt: '2026-10-19T10:00:00.000Z',
+      }).success,
     ).toBe(true);
     expect(playerListItemSchema.safeParse(item).success).toBe(false);
   });

@@ -5,6 +5,8 @@ import {
   createBrandSchema,
   createProductSchema,
   importProductRowSchema,
+  linkEquipmentTextSchema,
+  listEquipmentTextsSchema,
   listProductsSchema,
   reorderProductImagesSchema,
   slugify,
@@ -158,5 +160,24 @@ describe('строка импорта', () => {
         .success,
     ).toBe(false);
     expect(importProductRowSchema.safeParse({ ...row, attrs: { spin: 1 } }).success).toBe(false);
+  });
+});
+
+describe('«Выбор игроков» и строки инвентаря', () => {
+  it('порядок по игрокам и планка рейтинга', () => {
+    const parsed = listProductsSchema.parse({ sort: 'players', playerRatingFrom: '400' });
+    expect(parsed.playerRatingFrom).toBe(400);
+    expect(listProductsSchema.safeParse({ playerRatingTo: '-1' }).success).toBe(false);
+  });
+
+  it('связать строку с товаром', () => {
+    expect(
+      linkEquipmentTextSchema.safeParse({
+        kind: 'RUBBER',
+        text: 'Тенерджи 05',
+        productId: '00000000-0000-4000-8000-000000000001',
+      }).success,
+    ).toBe(true);
+    expect(listEquipmentTextsSchema.safeParse({ kind: 'TABLE' }).success).toBe(false);
   });
 });

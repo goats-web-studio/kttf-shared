@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { productListItemViewSchema } from './catalog.js';
 import { pageQuerySchema } from './pagination.js';
 import { cityRefSchema } from './place.js';
 
@@ -49,6 +50,13 @@ export type Grip = z.infer<typeof gripSchema>;
  * из неё станут первым его наполнением.
  */
 const equipment = z.string().trim().min(1).max(120);
+
+/**
+ * Инвентарь из каталога маркета — ADR-058. Строка выше остаётся для того,
+ * чего в каталоге нет. Основание — товар категории BLADE, накладки — RUBBER:
+ * категорию сверяет сервер, схема знает только идентификатор.
+ */
+const equipmentProduct = z.uuid();
 
 /**
  * Фото: путь к своему файлу либо внешняя ссылка.
@@ -155,6 +163,9 @@ const profile = {
   blade: equipment.optional(),
   rubberForehand: equipment.optional(),
   rubberBackhand: equipment.optional(),
+  bladeProductId: equipmentProduct.optional(),
+  rubberForehandProductId: equipmentProduct.optional(),
+  rubberBackhandProductId: equipmentProduct.optional(),
   /** «О себе». Ограничение по длине — чтобы поле не превратилось в блог. */
   bio: z.string().trim().min(1).max(500).optional(),
   /** Тренер, выбранный из списка. */
@@ -186,6 +197,9 @@ const clearable = {
   blade: profile.blade.nullable(),
   rubberForehand: profile.rubberForehand.nullable(),
   rubberBackhand: profile.rubberBackhand.nullable(),
+  bladeProductId: profile.bladeProductId.nullable(),
+  rubberForehandProductId: profile.rubberForehandProductId.nullable(),
+  rubberBackhandProductId: profile.rubberBackhandProductId.nullable(),
   bio: profile.bio.nullable(),
   coachPlayerId: profile.coachPlayerId.nullable(),
   coachName: profile.coachName.nullable(),
@@ -245,6 +259,10 @@ export const listPlayersSchema = pageQuerySchema.extend({
    * заполняют профиль.
    */
   coachesOnly: z.stringbool().optional(),
+  /** Играют этим основанием — «Кто играет» RTTF, ADR-058. */
+  bladeId: z.uuid().optional(),
+  /** Играют этой накладкой — справа или слева. */
+  rubberId: z.uuid().optional(),
 });
 export type ListPlayersQuery = z.infer<typeof listPlayersSchema>;
 
@@ -299,8 +317,22 @@ export type PlayerView = z.infer<typeof playerViewSchema>;
  * экран зала, где она не нужна. `null` — у игрока ещё нет ни одного события
  * рейтинга.
  */
+/**
+ * Инвентарь строкой для таблицы «основание / справа / слева», как у RTTF:
+ * подпись товара каталога со ссылкой или строка анкеты без ссылки.
+ */
+export const equipmentLabelSchema = z.object({
+  label: z.string(),
+  /** Адрес товара в маркете; `null` — строка анкеты без товара. */
+  slug: z.string().nullable(),
+});
+export type EquipmentLabel = z.infer<typeof equipmentLabelSchema>;
+
 export const playerListItemSchema = playerViewSchema.extend({
   ratingUpdatedAt: z.iso.datetime().nullable(),
+  blade: equipmentLabelSchema.nullable(),
+  rubberForehand: equipmentLabelSchema.nullable(),
+  rubberBackhand: equipmentLabelSchema.nullable(),
 });
 export type PlayerListItemView = z.infer<typeof playerListItemSchema>;
 
@@ -327,6 +359,10 @@ export const playerProfileViewSchema = playerViewSchema.extend({
   blade: z.string().nullable(),
   rubberForehand: z.string().nullable(),
   rubberBackhand: z.string().nullable(),
+  /** Инвентарь из каталога; строки выше — для того, чего в каталоге нет. */
+  bladeProduct: productListItemViewSchema.nullable(),
+  rubberForehandProduct: productListItemViewSchema.nullable(),
+  rubberBackhandProduct: productListItemViewSchema.nullable(),
   bio: z.string().nullable(),
   /** Заполнен, если тренер выбран из списка. */
   coachPlayerId: z.uuid().nullable(),

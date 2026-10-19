@@ -5,6 +5,7 @@ import {
   clubViewSchema,
   createClubSchema,
   listClubsSchema,
+  setClubTablesSchema,
   updateClubSchema,
 } from './club.js';
 
@@ -131,6 +132,7 @@ describe('клуб в ответе', () => {
       primaryContact: null,
       hours: [],
       prices: [],
+      tables: [],
       profileReviewedAt: null,
       hidden: false,
       createdAt: '2026-08-30T00:00:00.000Z',
@@ -209,5 +211,27 @@ describe('список клубов', () => {
 
   it('неизвестное удобство — отказ, а не молчаливый пропуск', () => {
     expect(listClubsSchema.safeParse({ amenities: 'POOL' }).success).toBe(false);
+  });
+});
+
+describe('столы клуба — ADR-058', () => {
+  const PRODUCT = '00000000-0000-4000-8000-0000000000f1';
+
+  it('модели с числом столов, без повторов', () => {
+    expect(
+      setClubTablesSchema.safeParse({ tables: [{ productId: PRODUCT, count: 8 }] }).success,
+    ).toBe(true);
+    expect(
+      setClubTablesSchema.safeParse({
+        tables: [
+          { productId: PRODUCT, count: 2 },
+          { productId: PRODUCT, count: 3 },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      setClubTablesSchema.safeParse({ tables: [{ productId: PRODUCT, count: 0 }] }).success,
+    ).toBe(false);
+    expect(setClubTablesSchema.safeParse({ tables: [] }).success).toBe(true);
   });
 });

@@ -216,7 +216,8 @@ export const updateProductSchema = productFields
   .superRefine(checkByCategory);
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 
-export const PRODUCT_SORTS = ['popular', 'name', 'new'] as const;
+/** `players` — «Выбор игроков»: по числу игроков, которые этим играют (M1.2). */
+export const PRODUCT_SORTS = ['popular', 'players', 'name', 'new'] as const;
 export const productSortSchema = z.enum(PRODUCT_SORTS);
 export type ProductSort = z.infer<typeof productSortSchema>;
 
@@ -232,6 +233,12 @@ export const listProductsSchema = pageQuerySchema.extend({
   brandId: commaSeparated.pipe(z.array(z.uuid()).min(1).max(20)).optional(),
   search: z.string().trim().min(1).max(100).optional(),
   sort: productSortSchema.default('popular'),
+  /**
+   * Планка рейтинга для «Выбора игроков»: «чем играют 400+». Считаются только
+   * игроки в этих границах — и в порядке `players`, и в `playerCount`.
+   */
+  playerRatingFrom: z.coerce.number().int().min(0).max(9999).optional(),
+  playerRatingTo: z.coerce.number().int().min(0).max(9999).optional(),
 });
 export type ListProductsQuery = z.infer<typeof listProductsSchema>;
 
@@ -259,6 +266,8 @@ export const productListItemViewSchema = z.object({
   name: z.string(),
   brand: brandRefSchema,
   image: productImageViewSchema.omit({ credit: true }).nullable(),
+  /** Игроков, у которых товар в инвентаре, — в границах рейтинга запроса, если они заданы. */
+  playerCount: z.number().int().nonnegative(),
 });
 export type ProductListItemView = z.infer<typeof productListItemViewSchema>;
 
@@ -269,6 +278,8 @@ export const productViewSchema = productListItemViewSchema.omit({ image: true })
   options: z.record(z.string(), z.array(z.string())),
   images: z.array(productImageViewSchema),
   status: productStatusSchema,
+  /** Клубов, где стоит этот стол; у остальных категорий — 0. */
+  clubCount: z.number().int().nonnegative(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
@@ -350,3 +361,39 @@ export const importRowResultSchema = z.object({
   reason: z.string().optional(),
 });
 export type ImportRowResult = z.infer<typeof importRowResultSchema>;
+
+// ---------- инвентарь игроков: строки без товара ----------
+
+/**
+ * Строки инвентаря ADR-035, которые ещё не связаны с товаром каталога, —
+ * `docs/10` 4.2. Администратор связывает строку с товаром разом у всех
+ * игроков, кто её написал: «Тенерджи 05» у двадцати человек — одно действие.
+ */
+export const EQUIPMENT_TEXT_KINDS = ['BLADE', 'RUBBER'] as const;
+export const equipmentTextKindSchema = z.enum(EQUIPMENT_TEXT_KINDS);
+export type EquipmentTextKind = z.infer<typeof equipmentTextKindSchema>;
+
+export const listEquipmentTextsSchema = pageQuerySchema.extend({
+  kind: equipmentTextKindSchema,
+});
+export type ListEquipmentTextsQuery = z.infer<typeof listEquipmentTextsSchema>;
+
+export const equipmentTextViewSchema = z.object({
+  text: z.string(),
+  /** Игроков с этой строкой без товара. */
+  players: z.number().int().positive(),
+});
+export type EquipmentTextView = z.infer<typeof equipmentTextViewSchema>;
+
+export const linkEquipmentTextSchema = z.object({
+  kind: equipmentTextKindSchema,
+  text: z.string().trim().min(1).max(120),
+  productId: z.uuid(),
+});
+export type LinkEquipmentTextInput = z.infer<typeof linkEquipmentTextSchema>;
+
+export const linkEquipmentTextResultSchema = z.object({
+  /** Скольким игрокам проставлен товар. */
+  updated: z.number().int().nonnegative(),
+});
+export type LinkEquipmentTextResult = z.infer<typeof linkEquipmentTextResultSchema>;

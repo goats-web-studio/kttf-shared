@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { productListItemViewSchema } from './catalog.js';
 import { clubHoursIntervalSchema } from './club-hours.js';
 import { clubPriceViewSchema } from './club-page.js';
 import { CLUB_IMAGE_PATH_PATTERN } from './media.js';
@@ -137,6 +138,8 @@ export const listClubsSchema = pageQuerySchema.extend({
     .optional(),
   /** Только клубы с ближайшим или идущим турниром. */
   upcoming: z.stringbool().optional(),
+  /** Клубы, где стоит этот стол, — «Где стоит» на странице товара (ADR-058). */
+  tableProductId: z.uuid().optional(),
 });
 export type ListClubsQuery = z.infer<typeof listClubsSchema>;
 
@@ -193,6 +196,8 @@ export const clubViewSchema = z.object({
   primaryContact: contactKindSchema.nullable(),
   hours: z.array(clubHoursIntervalSchema),
   prices: z.array(clubPriceViewSchema),
+  /** Модели столов из каталога маркета с числом столов каждой (ADR-058). */
+  tables: z.array(z.object({ product: productListItemViewSchema, count: z.number().int() })),
   /** Когда страницу последний раз сохраняли или подтверждали «Всё актуально». */
   profileReviewedAt: z.iso.datetime().nullable(),
   /** Скрыт из каталога администратором. По прямой ссылке страница открывается. */
@@ -217,3 +222,20 @@ export const clubMemberViewSchema = z.object({
   name: z.string().nullable(),
 });
 export type ClubMemberView = z.infer<typeof clubMemberViewSchema>;
+
+/**
+ * Столы клуба — модели из каталога маркета (ADR-058, `docs/10` 4.2). Правятся
+ * списком целиком, как часы и цены. Сумма может не совпасть с `tableCount`:
+ * столы без известной модели в список не попадают.
+ */
+export const CLUB_TABLE_MODELS_MAX = 6;
+
+export const setClubTablesSchema = z.object({
+  tables: z
+    .array(z.object({ productId: z.uuid(), count: z.number().int().positive().max(200) }))
+    .max(CLUB_TABLE_MODELS_MAX)
+    .refine((list) => new Set(list.map((row) => row.productId)).size === list.length, {
+      message: 'Модель повторяется',
+    }),
+});
+export type SetClubTablesInput = z.infer<typeof setClubTablesSchema>;
