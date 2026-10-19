@@ -81,6 +81,17 @@ export const ERROR_CODES = {
    * справочник избавляет.
    */
   PLACE_ALREADY_EXISTS: 'PLACE_ALREADY_EXISTS',
+
+  // ---------- страница клуба: ADR-055 ----------
+
+  /**
+   * Достигнут предел тарифа страницы: фото, видео, записей в месяц или
+   * закреплённых. `details.limit` — какой, `details.max` — его величина.
+   * Пока тарифы выключены, действует защитный предел (`clubLimits`).
+   */
+  CLUB_PLAN_LIMIT: 'CLUB_PLAN_LIMIT',
+  /** Ссылка не на ролик YouTube, или ролик недоступен: обложку не скачать. */
+  VIDEO_NOT_FOUND: 'VIDEO_NOT_FOUND',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
