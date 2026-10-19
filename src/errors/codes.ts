@@ -92,6 +92,11 @@ export const ERROR_CODES = {
   CLUB_PLAN_LIMIT: 'CLUB_PLAN_LIMIT',
   /** Ссылка не на ролик YouTube, или ролик недоступен: обложку не скачать. */
   VIDEO_NOT_FOUND: 'VIDEO_NOT_FOUND',
+
+  // ---------- маркет: ADR-058 ----------
+
+  /** Производитель с таким названием уже есть: два «Butterfly» — ровно то, от чего справочник избавляет. */
+  BRAND_ALREADY_EXISTS: 'BRAND_ALREADY_EXISTS',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

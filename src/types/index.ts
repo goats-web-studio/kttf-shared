@@ -1,5 +1,6 @@
 export * from './account.js';
 export * from './auth.js';
+export * from './catalog.js';
 export * from './club.js';
 export * from './club-application.js';
 export * from './club-content.js';
@@ -13,6 +14,7 @@ export * from './place.js';
 export * from './player.js';
 export * from './player-history.js';
 export * from './player-profile.js';
+export * from './product-attributes.js';
 export * from './results.js';
 export * from './screen.js';
 export * from './stage.js';
