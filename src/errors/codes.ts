@@ -97,6 +97,21 @@ export const ERROR_CODES = {
 
   /** Производитель с таким названием уже есть: два «Butterfly» — ровно то, от чего справочник избавляет. */
   BRAND_ALREADY_EXISTS: 'BRAND_ALREADY_EXISTS',
+
+  // ---------- страница тренера: ADR-059 ----------
+
+  /** У игрока уже есть страница тренера: одна на профиль. */
+  COACH_ALREADY_EXISTS: 'COACH_ALREADY_EXISTS',
+  /**
+   * На проверку отправляется страница с городом и хотя бы одной тренировкой.
+   * `details.missing` — чего не хватает (`coachMissing`).
+   */
+  COACH_INCOMPLETE: 'COACH_INCOMPLETE',
+  /**
+   * Действие не подходит к статусу заявки: отправить уже отправленную,
+   * одобрить неотправленную. `details.status` — текущий.
+   */
+  COACH_STATUS_INVALID: 'COACH_STATUS_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

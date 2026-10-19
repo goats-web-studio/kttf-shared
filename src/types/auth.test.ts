@@ -13,6 +13,7 @@ const USER = {
   playerId: null,
   clubRoles: [{ clubId: '00000000-0000-4000-8000-000000000002', role: 'OWNER' }],
   isAdmin: false,
+  coach: null,
 };
 
 describe('телефон', () => {

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { coachRefSchema } from './coach.js';
+
 /**
  * Контракт аутентификации — ТС 7.1.
  *
@@ -113,6 +115,12 @@ export const authUserViewSchema = z.object({
   clubRoles: z.array(clubRoleViewSchema),
   /** Администратор платформы — ведёт справочники (ADR-046). */
   isAdmin: z.boolean(),
+  /**
+   * Своя страница тренера и статус заявки — ADR-059. `null` — страницы нет.
+   * Умолчание — для записи о вошедшем на диске браузера (ADR-057), сделанной
+   * до появления поля: без него она не прошла бы схему и считалась испорченной.
+   */
+  coach: coachRefSchema.nullable().default(null),
 });
 export type AuthUserView = z.infer<typeof authUserViewSchema>;
 

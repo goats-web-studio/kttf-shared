@@ -7,6 +7,7 @@ export * from './club-content.js';
 export * from './club-hours.js';
 export * from './club-page.js';
 export * from './club-plan.js';
+export * from './coach.js';
 export * from './match.js';
 export * from './media.js';
 export * from './pagination.js';

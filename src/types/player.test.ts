@@ -207,6 +207,7 @@ describe('игрок в ответе', () => {
       bio: 'hate tensor, love sticky',
       coachPlayerId: null,
       coachName: 'Сериков Тимур',
+      coachSlug: null,
       birthYearOnly: true,
       lastSeenAt: null,
       online: false,
