@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { addMemberSchema, clubViewSchema, createClubSchema, updateClubSchema } from './club.js';
+import {
+  addMemberSchema,
+  clubViewSchema,
+  createClubSchema,
+  listClubsSchema,
+  updateClubSchema,
+} from './club.js';
 
 const CLUB_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -113,9 +119,95 @@ describe('клуб в ответе', () => {
       instagram: null,
       logoUrl: null,
       description: null,
+      coverUrl: null,
+      website: null,
+      telegram: null,
+      twoGisUrl: null,
+      amenities: [],
+      tableBrand: null,
+      floorType: null,
+      ceilingHeightCm: null,
+      hoursNote: null,
+      primaryContact: null,
+      hours: [],
+      prices: [],
+      profileReviewedAt: null,
+      hidden: false,
       createdAt: '2026-08-30T00:00:00.000Z',
     };
 
     expect(clubViewSchema.parse(club)).toEqual(club);
+  });
+});
+
+describe('страница клуба', () => {
+  const CITY = '00000000-0000-4000-8000-0000000000c1';
+  const IMAGE = '/api/v1/files/clubs/11111111-1111-4111-8111-111111111111.webp';
+  const base = { name: 'Ракетка', cityId: CITY };
+
+  it('логотип — своя картинка или внешняя ссылка, обложка — только своя', () => {
+    expect(createClubSchema.safeParse({ ...base, logoUrl: IMAGE }).success).toBe(true);
+    expect(createClubSchema.safeParse({ ...base, logoUrl: 'https://x.kz/logo.png' }).success).toBe(
+      true,
+    );
+    expect(createClubSchema.safeParse({ ...base, coverUrl: IMAGE }).success).toBe(true);
+    expect(createClubSchema.safeParse({ ...base, coverUrl: 'https://x.kz/c.jpg' }).success).toBe(
+      false,
+    );
+  });
+
+  it('сайт — только http или https', () => {
+    expect(createClubSchema.safeParse({ ...base, website: 'https://club.kz' }).success).toBe(true);
+    expect(createClubSchema.safeParse({ ...base, website: 'javascript:alert(1)' }).success).toBe(
+      false,
+    );
+  });
+
+  it('Telegram — имя без собаки', () => {
+    expect(createClubSchema.safeParse({ ...base, telegram: 'kttf_club' }).success).toBe(true);
+    expect(createClubSchema.safeParse({ ...base, telegram: '@kttf_club' }).success).toBe(false);
+  });
+
+  it('карта — только ссылка 2GIS', () => {
+    expect(
+      createClubSchema.safeParse({ ...base, twoGisUrl: 'https://2gis.kz/almaty/firm/701' }).success,
+    ).toBe(true);
+    expect(
+      createClubSchema.safeParse({ ...base, twoGisUrl: 'https://go.2gis.com/abc12' }).success,
+    ).toBe(true);
+    expect(
+      createClubSchema.safeParse({ ...base, twoGisUrl: 'https://maps.google.com/x' }).success,
+    ).toBe(false);
+  });
+
+  it('удобство не повторяется', () => {
+    expect(createClubSchema.safeParse({ ...base, amenities: ['WIFI', 'KIDS'] }).success).toBe(true);
+    expect(createClubSchema.safeParse({ ...base, amenities: ['WIFI', 'WIFI'] }).success).toBe(
+      false,
+    );
+  });
+
+  it('поля страницы стираются null', () => {
+    expect(
+      updateClubSchema.safeParse({ coverUrl: null, telegram: null, ceilingHeightCm: null }).success,
+    ).toBe(true);
+  });
+});
+
+describe('список клубов', () => {
+  it('города и удобства — через запятую', () => {
+    const query = listClubsSchema.parse({
+      cityId: '00000000-0000-4000-8000-0000000000c1, 00000000-0000-4000-8000-0000000000c2',
+      amenities: 'KIDS,WIFI',
+      upcoming: 'true',
+    });
+
+    expect(query.cityId).toHaveLength(2);
+    expect(query.amenities).toEqual(['KIDS', 'WIFI']);
+    expect(query.upcoming).toBe(true);
+  });
+
+  it('неизвестное удобство — отказ, а не молчаливый пропуск', () => {
+    expect(listClubsSchema.safeParse({ amenities: 'POOL' }).success).toBe(false);
   });
 });
