@@ -15,8 +15,10 @@ import { z } from 'zod';
 export const PRODUCT_CATEGORIES = [
   'BLADE',
   'RUBBER',
+  'RACKET',
   'BALL',
   'CASE',
+  'BAG',
   'TOP',
   'BOTTOM',
   'SOCKS',
@@ -31,8 +33,10 @@ export type ProductCategory = z.infer<typeof productCategorySchema>;
 export const PRODUCT_CATEGORY_SLUGS: Readonly<Record<ProductCategory, string>> = {
   BLADE: 'blades',
   RUBBER: 'rubbers',
+  RACKET: 'rackets',
   BALL: 'balls',
   CASE: 'cases',
+  BAG: 'bags',
   TOP: 'tops',
   BOTTOM: 'bottoms',
   SOCKS: 'socks',
@@ -59,6 +63,7 @@ export const COLORS = [
   'GREY',
   'BROWN',
   'NAVY',
+  'BEIGE',
   'MULTI',
 ] as const;
 export type Color = (typeof COLORS)[number];
@@ -90,25 +95,30 @@ export type AttributeDef =
       readonly kind: 'number' | 'numbers';
       readonly min: number;
       readonly max: number;
-      readonly unit?: 'g' | 'mm' | 'deg' | 'kg' | 'pcs';
+      readonly unit?: 'g' | 'mm' | 'deg' | 'kg' | 'pcs' | 'l';
       readonly brandScale?: true;
       readonly filter: boolean;
     }
   | { readonly key: string; readonly kind: 'bool'; readonly filter: boolean }
   | { readonly key: string; readonly kind: 'text'; readonly max: number; readonly filter: false };
 
-const PLAY_STYLES = ['ATTACK', 'FAST_ATTACK', 'ALLROUND', 'DEFENCE', 'BLOCK'] as const;
+const PLAY_STYLES = [
+  'ATTACK',
+  'FAST_ATTACK',
+  'TOPSPIN',
+  'ALLROUND',
+  'CONTROL',
+  'DEFENCE',
+  'BLOCK',
+] as const;
+const BLADE_TYPES = ['OFF_PLUS', 'OFF', 'OFF_MINUS', 'ALL_PLUS', 'ALL', 'DEF', 'OFF_DEF'] as const;
+const RUBBER_TYPES = ['INVERTED', 'SHORT_PIPS', 'MEDIUM_PIPS', 'LONG_PIPS', 'ANTI'] as const;
 const AUDIENCES = ['MEN', 'WOMEN', 'UNISEX', 'KIDS'] as const;
 
 /** Характеристики по категориям. Порядок — порядок показа на карточке. */
 export const PRODUCT_ATTRIBUTES: Readonly<Record<ProductCategory, readonly AttributeDef[]>> = {
   BLADE: [
-    {
-      key: 'bladeType',
-      kind: 'enum',
-      values: ['OFF_PLUS', 'OFF', 'OFF_MINUS', 'ALL_PLUS', 'ALL', 'DEF', 'OFF_DEF'],
-      filter: true,
-    },
+    { key: 'bladeType', kind: 'enum', values: BLADE_TYPES, filter: true },
     { key: 'construction', kind: 'enum', values: ['COMPOSITE', 'ALL_WOOD'], filter: true },
     { key: 'plies', kind: 'number', min: 1, max: 9, filter: true },
     { key: 'compositePlies', kind: 'number', min: 0, max: 6, filter: false },
@@ -118,16 +128,12 @@ export const PRODUCT_ATTRIBUTES: Readonly<Record<ProductCategory, readonly Attri
     { key: 'control', kind: 'number', min: 0, max: 200, brandScale: true, filter: false },
     { key: 'vibration', kind: 'number', min: 0, max: 200, brandScale: true, filter: false },
     { key: 'headSize', kind: 'text', max: 40, filter: false },
+    { key: 'handleSize', kind: 'text', max: 40, filter: false },
     { key: 'playStyle', kind: 'enum', values: PLAY_STYLES, filter: true },
     { key: 'sweetSpot', kind: 'enum', values: ['SMALL', 'MEDIUM', 'LARGE'], filter: false },
   ],
   RUBBER: [
-    {
-      key: 'rubberType',
-      kind: 'enum',
-      values: ['INVERTED', 'SHORT_PIPS', 'MEDIUM_PIPS', 'LONG_PIPS', 'ANTI'],
-      filter: true,
-    },
+    { key: 'rubberType', kind: 'enum', values: RUBBER_TYPES, filter: true },
     { key: 'tensor', kind: 'bool', filter: true },
     { key: 'speed', kind: 'number', min: 0, max: 200, brandScale: true, filter: false },
     { key: 'spin', kind: 'number', min: 0, max: 200, brandScale: true, filter: false },
@@ -135,6 +141,21 @@ export const PRODUCT_ATTRIBUTES: Readonly<Record<ProductCategory, readonly Attri
     { key: 'hardness', kind: 'enum', values: ['SOFT', 'MEDIUM', 'HARD'], filter: true },
     { key: 'hardnessDeg', kind: 'numbers', min: 20, max: 65, unit: 'deg', filter: false },
     { key: 'spongeColor', kind: 'enum', values: COLORS, filter: false },
+    { key: 'weight', kind: 'number', min: 20, max: 120, unit: 'g', filter: false },
+    { key: 'playStyle', kind: 'enum', values: PLAY_STYLES, filter: true },
+  ],
+  /** Готовые ракетки и наборы — у RTTF скрытая категория «Наборы, ракетки». */
+  RACKET: [
+    { key: 'bladeType', kind: 'enum', values: BLADE_TYPES, filter: true },
+    { key: 'rubberType', kind: 'enum', values: RUBBER_TYPES, filter: true },
+    { key: 'speed', kind: 'number', min: 0, max: 200, brandScale: true, filter: false },
+    { key: 'spin', kind: 'number', min: 0, max: 200, brandScale: true, filter: false },
+    { key: 'control', kind: 'number', min: 0, max: 200, brandScale: true, filter: false },
+    { key: 'spongeThickness', kind: 'number', min: 0, max: 3, unit: 'mm', filter: false },
+    { key: 'weight', kind: 'number', min: 40, max: 400, unit: 'g', filter: false },
+    { key: 'racketCount', kind: 'number', min: 1, max: 10, unit: 'pcs', filter: true },
+    { key: 'ballsIncluded', kind: 'number', min: 0, max: 100, unit: 'pcs', filter: false },
+    { key: 'caseIncluded', kind: 'bool', filter: true },
     { key: 'playStyle', kind: 'enum', values: PLAY_STYLES, filter: true },
   ],
   BALL: [
@@ -151,6 +172,18 @@ export const PRODUCT_ATTRIBUTES: Readonly<Record<ProductCategory, readonly Attri
       filter: true,
     },
     { key: 'material', kind: 'text', max: 60, filter: false },
+    { key: 'dimensions', kind: 'text', max: 60, filter: false },
+  ],
+  BAG: [
+    {
+      key: 'bagType',
+      kind: 'enum',
+      values: ['SPORTS_BAG', 'BACKPACK', 'SHOE_BAG', 'WAIST_BAG'],
+      filter: true,
+    },
+    { key: 'volume', kind: 'number', min: 1, max: 200, unit: 'l', filter: false },
+    { key: 'dimensions', kind: 'text', max: 60, filter: false },
+    { key: 'material', kind: 'text', max: 60, filter: false },
   ],
   TOP: [
     { key: 'topType', kind: 'enum', values: ['TSHIRT', 'POLO', 'TANK'], filter: true },
@@ -162,7 +195,10 @@ export const PRODUCT_ATTRIBUTES: Readonly<Record<ProductCategory, readonly Attri
     { key: 'audience', kind: 'enum', values: AUDIENCES, filter: true },
     { key: 'material', kind: 'text', max: 60, filter: false },
   ],
-  SOCKS: [{ key: 'socksType', kind: 'enum', values: ['SHORT', 'LONG'], filter: true }],
+  SOCKS: [
+    { key: 'socksType', kind: 'enum', values: ['SHORT', 'LONG'], filter: true },
+    { key: 'material', kind: 'text', max: 60, filter: false },
+  ],
   SHOES: [
     { key: 'shoesType', kind: 'enum', values: ['SNEAKERS', 'SLIDES', 'INSOLES'], filter: true },
     { key: 'audience', kind: 'enum', values: AUDIENCES, filter: true },
@@ -174,6 +210,8 @@ export const PRODUCT_ATTRIBUTES: Readonly<Record<ProductCategory, readonly Attri
     { key: 'material', kind: 'text', max: 60, filter: false },
     { key: 'weight', kind: 'number', min: 1, max: 400, unit: 'kg', filter: false },
     { key: 'packageSize', kind: 'text', max: 60, filter: false },
+    { key: 'playSize', kind: 'text', max: 60, filter: false },
+    { key: 'foldedSize', kind: 'text', max: 60, filter: false },
   ],
   OTHER: [],
 };
@@ -188,8 +226,10 @@ export type OptionAxis = (typeof OPTION_AXES)[number];
 export const PRODUCT_OPTION_AXES: Readonly<Record<ProductCategory, readonly OptionAxis[]>> = {
   BLADE: ['handle'],
   RUBBER: ['thickness', 'color'],
+  RACKET: ['handle'],
   BALL: ['color'],
   CASE: ['color'],
+  BAG: ['color'],
   TOP: ['color', 'size'],
   BOTTOM: ['color', 'size'],
   SOCKS: ['color', 'size'],

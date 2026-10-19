@@ -18,7 +18,7 @@ describe('категории маркета', () => {
     for (const category of PRODUCT_CATEGORIES) {
       expect(categoryBySlug(PRODUCT_CATEGORY_SLUGS[category])).toBe(category);
     }
-    expect(categoryBySlug('rackets')).toBeNull();
+    expect(categoryBySlug('paddles')).toBeNull();
   });
 
   it('ключи характеристик внутри категории не повторяются', () => {
