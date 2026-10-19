@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createPlayerSchema,
+  listPlayersSchema,
+  playerListItemSchema,
   playerProfileViewSchema,
   playerViewSchema,
   updatePlayerSchema,
@@ -229,5 +231,59 @@ describe('приватность даты рождения', () => {
   it('в кратком виде даты нет вовсе, прятать нечего', () => {
     expect(playerViewSchema.shape).not.toHaveProperty('birthDate');
     expect(playerViewSchema.shape).not.toHaveProperty('birthYearOnly');
+  });
+});
+
+describe('список игроков — ADR-054', () => {
+  const CITY_A = '00000000-0000-4000-8000-0000000000c1';
+  const CITY_B = '00000000-0000-4000-8000-0000000000c2';
+
+  it('города — списком через запятую, один город — частный случай', () => {
+    expect(listPlayersSchema.parse({ cityId: `${CITY_A}, ${CITY_B}` }).cityId).toEqual([
+      CITY_A,
+      CITY_B,
+    ]);
+    expect(listPlayersSchema.parse({ cityId: CITY_A }).cityId).toEqual([CITY_A]);
+    expect(listPlayersSchema.safeParse({ cityId: `${CITY_A},алматы` }).success).toBe(false);
+  });
+
+  it('границы рейтинга — целые из строки адреса', () => {
+    const query = listPlayersSchema.parse({ ratingFrom: '300', ratingTo: '4000' });
+    expect(query.ratingFrom).toBe(300);
+    expect(query.ratingTo).toBe(4000);
+    expect(listPlayersSchema.safeParse({ ratingFrom: '300.5' }).success).toBe(false);
+    expect(listPlayersSchema.safeParse({ ratingTo: '-1' }).success).toBe(false);
+  });
+
+  it('пол, рука и порядок — из закрытых списков, без них — все и сильнейшие первыми', () => {
+    const query = listPlayersSchema.parse({ gender: 'FEMALE', playingHand: 'LEFT', order: 'asc' });
+    expect(query).toMatchObject({ gender: 'FEMALE', playingHand: 'LEFT', order: 'asc' });
+    expect(listPlayersSchema.parse({}).order).toBeUndefined();
+    expect(listPlayersSchema.safeParse({ order: 'name' }).success).toBe(false);
+  });
+
+  it('строка списка — краткий вид и дата обновления рейтинга', () => {
+    const item = {
+      id: PLAYER_ID,
+      userId: null,
+      lastName: 'Ахметов',
+      firstName: 'Данияр',
+      middleName: null,
+      birthYear: 2001,
+      gender: 'MALE',
+      city: { id: CITY_A, name: 'Алматы', nameKk: null },
+      photoUrl: null,
+      clubId: null,
+      rating: '250.00',
+      ratedMatches: 0,
+      isProvisional: true,
+      createdAt: '2026-08-29T00:00:00.000Z',
+    };
+    expect(playerListItemSchema.safeParse({ ...item, ratingUpdatedAt: null }).success).toBe(true);
+    expect(
+      playerListItemSchema.safeParse({ ...item, ratingUpdatedAt: '2026-10-19T10:00:00.000Z' })
+        .success,
+    ).toBe(true);
+    expect(playerListItemSchema.safeParse(item).success).toBe(false);
   });
 });

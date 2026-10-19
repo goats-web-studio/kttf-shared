@@ -201,10 +201,33 @@ export const updatePlayerSchema = z
   });
 export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
 
+/** Граница рейтинга в фильтре — целое, как рейтинг читается на экране (ADR-053). */
+const ratingBound = z.coerce.number().int().min(0).max(9999).optional();
+
 export const listPlayersSchema = pageQuerySchema.extend({
   search: z.string().trim().min(1).max(100).optional(),
-  cityId: z.uuid().optional(),
+  /**
+   * Город или несколько через запятую — ADR-054, как у RTTF «регион / город»
+   * с плюсом. Один город — частный случай списка.
+   */
+  cityId: z
+    .string()
+    .transform((value) => value.split(',').map((part) => part.trim()))
+    .pipe(z.array(z.uuid()).min(1).max(20))
+    .optional(),
   clubId: z.uuid().optional(),
+  /**
+   * Рейтинг «от» и «до» включительно — по тому числу, что видно на экране:
+   * «до 384» находит и 384.10 (ADR-054).
+   */
+  ratingFrom: ratingBound,
+  ratingTo: ratingBound,
+  /** Без значения — оба пола. */
+  gender: genderSchema.optional(),
+  /** Игровая рука. Без значения — любая, включая не указанную. */
+  playingHand: playingHandSchema.optional(),
+  /** Порядок по рейтингу; без значения — сильнейшие первыми. */
+  order: z.enum(['asc', 'desc']).optional(),
   /**
    * Только игроки без кабинета — нужен регистрации (ADR-034).
    *
@@ -224,6 +247,14 @@ export const listPlayersSchema = pageQuerySchema.extend({
   coachesOnly: z.stringbool().optional(),
 });
 export type ListPlayersQuery = z.infer<typeof listPlayersSchema>;
+
+/**
+ * Запрос списка с клиента: город — один или несколько, в адрес уходит через
+ * запятую. Отдельный тип, потому что разобранный запрос несёт массив.
+ */
+export type ListPlayersRequest = Omit<ListPlayersQuery, 'cityId'> & {
+  readonly cityId?: string | readonly string[];
+};
 
 /**
  * Игрок в ответах API — краткий вид.
@@ -259,6 +290,19 @@ export const playerViewSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export type PlayerView = z.infer<typeof playerViewSchema>;
+
+/**
+ * Строка списка игроков — ADR-054.
+ *
+ * Краткий вид и дата последнего изменения рейтинга — колонка «обновлён», как
+ * у RTTF. В сам `PlayerView` дата не входит: он уезжает в офлайн-снимок и на
+ * экран зала, где она не нужна. `null` — у игрока ещё нет ни одного события
+ * рейтинга.
+ */
+export const playerListItemSchema = playerViewSchema.extend({
+  ratingUpdatedAt: z.iso.datetime().nullable(),
+});
+export type PlayerListItemView = z.infer<typeof playerListItemSchema>;
 
 /**
  * Полный профиль игрока — ТЗ 2.2 целиком.
