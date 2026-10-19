@@ -2,6 +2,7 @@ export * from './account.js';
 export * from './auth.js';
 export * from './club.js';
 export * from './club-application.js';
+export * from './club-content.js';
 export * from './club-hours.js';
 export * from './club-page.js';
 export * from './club-plan.js';
