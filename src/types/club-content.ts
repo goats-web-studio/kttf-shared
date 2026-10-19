@@ -125,8 +125,13 @@ export const clubMediaViewSchema = z.object({
 });
 export type ClubMediaView = z.infer<typeof clubMediaViewSchema>;
 
-/** Идентификатор ролика YouTube — 11 знаков из латиницы, цифр, `-` и `_`. */
-const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+/**
+ * Ссылка на ролик YouTube и его идентификатор (11 знаков) — первой из трёх
+ * групп. Разбор выражением, а не `URL`: общий код не тянет библиотек
+ * платформы и собирается без DOM и Node.
+ */
+const YOUTUBE_URL =
+  /^https?:\/\/(?:www\.|m\.)?(?:youtu\.be\/([\w-]{11})|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=([\w-]{11})|(?:shorts|embed|live)\/([\w-]{11})))(?:[?&#/].*)?$/;
 
 /**
  * Идентификатор ролика из ссылки, как её копируют: `youtu.be/<id>`,
@@ -135,33 +140,10 @@ const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
  * можно только YouTube, и только через `youtube-nocookie.com`.
  */
 export function parseYoutubeId(input: string): string | null {
-  let url: URL;
+  const match = YOUTUBE_URL.exec(input.trim());
 
-  try {
-    url = new URL(input.trim());
-  } catch {
-    return null;
-  }
-
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-
-  const host = url.hostname.replace(/^(www\.|m\.)/, '');
-  let id: string | null = null;
-
-  if (host === 'youtu.be') {
-    id = url.pathname.slice(1);
-  } else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
-    const [, section, value] = url.pathname.split('/');
-
-    id =
-      url.pathname === '/watch'
-        ? url.searchParams.get('v')
-        : section === 'shorts' || section === 'embed' || section === 'live'
-          ? (value ?? null)
-          : null;
-  }
-
-  return id !== null && YOUTUBE_ID.test(id) ? id : null;
+  // Совпала ровно одна группа; несовпавшие при склейке дают пустую строку.
+  return match === null ? null : match.slice(1).join('');
 }
 
 // ---------------------------------------------------------------- модерация
