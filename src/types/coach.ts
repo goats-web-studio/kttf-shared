@@ -271,6 +271,8 @@ export type TrainingLink = z.infer<typeof trainingLinkSchema>;
 /** Возраст ребёнка, с которого берут: от трёх лет до семнадцати. */
 const kidsAge = z.number().int().min(3).max(17);
 
+export const TRAINING_DESCRIPTION_MAX = 1000;
+
 /** Поля тренировки, общие у тренера и клуба. */
 const trainingFields = {
   /** Строка списка: сохраняет тренировку и её связь со второй стороной. */
@@ -286,6 +288,8 @@ const trainingFields = {
   priceKzt: z.number().int().min(0).max(PRICE_KZT_MAX).nullable().optional(),
   unit: priceUnitSchema,
   note: text(200).nullable().optional(),
+  /** «Подробнее»: что будет на занятии, что взять с собой. Простой текст. */
+  description: text(TRAINING_DESCRIPTION_MAX).nullable().optional(),
 };
 
 function kidsAgeForChildren(
@@ -420,6 +424,13 @@ export const trainingClubRefSchema = z.object({
   logoUrl: z.string().nullable(),
   address: z.string().nullable(),
   city: cityRefSchema,
+  /** Маршрут — ссылка клуба в 2GIS, иначе поиск по адресу. */
+  twoGisUrl: z.string().nullable(),
+  /** Контакты — для «Записаться» прямо из списка, без захода на страницу. */
+  phone: z.string().nullable(),
+  whatsapp: z.string().nullable(),
+  telegram: z.string().nullable(),
+  primaryContact: contactKindSchema.nullable(),
 });
 export type TrainingClubRef = z.infer<typeof trainingClubRefSchema>;
 
@@ -429,6 +440,11 @@ export const trainingCoachRefSchema = z.object({
   slug: z.string(),
   player: coachPlayerRefSchema,
   photoUrl: z.string().nullable(),
+  /** Контакты — для «Записаться» прямо из списка, без захода на страницу. */
+  phone: z.string().nullable(),
+  whatsapp: z.string().nullable(),
+  telegram: z.string().nullable(),
+  primaryContact: contactKindSchema.nullable(),
 });
 export type TrainingCoachRef = z.infer<typeof trainingCoachRefSchema>;
 
@@ -457,8 +473,41 @@ export const trainingViewSchema = z.object({
   priceKzt: z.number().int().nullable(),
   unit: priceUnitSchema,
   note: z.string().nullable(),
+  description: z.string().nullable(),
 });
 export type TrainingView = z.infer<typeof trainingViewSchema>;
+
+/**
+ * Владелец тренировки — тот, кто её завёл, и с ним связываются.
+ * Группа клуба — владелец клуб, тренер в ней указан тренером. Своя
+ * тренировка тренера — владелец тренер, клуб в ней — место.
+ */
+export type TrainingOwner =
+  | { readonly kind: 'CLUB'; readonly club: TrainingClubRef }
+  | { readonly kind: 'COACH'; readonly coach: TrainingCoachRef };
+
+/** Кому писать «Записаться». `null` — владельца не видно смотрящему. */
+export function trainingOwner(
+  training: Pick<TrainingView, 'author' | 'club' | 'coach'>,
+): TrainingOwner | null {
+  if (training.author === 'CLUB') {
+    return training.club === null ? null : { kind: 'CLUB', club: training.club };
+  }
+
+  return training.coach === null ? null : { kind: 'COACH', coach: training.coach };
+}
+
+/** Сколько других тренировок владельца на странице тренировки. */
+export const TRAINING_MORE_MAX = 6;
+
+/**
+ * Страница тренировки — `GET /trainings/:id`, «Подробнее». Видимость — та
+ * же, что в списке. `more` — другие публичные тренировки того же владельца.
+ */
+export const trainingDetailViewSchema = trainingViewSchema.extend({
+  more: z.array(trainingViewSchema).max(TRAINING_MORE_MAX),
+});
+export type TrainingDetailView = z.infer<typeof trainingDetailViewSchema>;
 
 /**
  * Тренировки клуба в кабинете — `GET /clubs/:id/trainings/manage`: свои,

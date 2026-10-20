@@ -19,6 +19,7 @@ import {
   setCoachHiddenSchema,
   setClubTrainingsSchema,
   setCoachTrainingsSchema,
+  trainingOwner,
   updateCoachSchema,
 } from './coach.js';
 
@@ -330,5 +331,37 @@ describe('сессия', () => {
     const coach = { id: OTHER, slug: 'ivanov-ivan', status: 'PENDING' };
 
     expect(authUserViewSchema.parse({ ...user, coach }).coach).toEqual(coach);
+  });
+});
+
+describe('владелец тренировки', () => {
+  const club = { id: ID, name: 'Клуб «Спин»' };
+  const coach = { id: OTHER, slug: 'petrov-aleksey' };
+  const as = (value: unknown) => value as Parameters<typeof trainingOwner>[0];
+
+  it('группа клуба — пишут клубу, даже если в ней указан тренер', () => {
+    expect(trainingOwner(as({ author: 'CLUB', club, coach }))).toEqual({ kind: 'CLUB', club });
+  });
+
+  it('своя тренировка тренера — пишут тренеру, клуб в ней только место', () => {
+    expect(trainingOwner(as({ author: 'COACH', club, coach }))).toEqual({ kind: 'COACH', coach });
+  });
+
+  it('владельца не видно — писать некому', () => {
+    expect(trainingOwner(as({ author: 'CLUB', club: null, coach }))).toBeNull();
+    expect(trainingOwner(as({ author: 'COACH', club, coach: null }))).toBeNull();
+  });
+
+  it('«Подробнее» — до тысячи знаков', () => {
+    expect(
+      setCoachTrainingsSchema.safeParse({
+        trainings: [{ ...group, description: 'Берите сменную обувь' }],
+      }).success,
+    ).toBe(true);
+    expect(
+      setCoachTrainingsSchema.safeParse({
+        trainings: [{ ...group, description: 'а'.repeat(1001) }],
+      }).success,
+    ).toBe(false);
   });
 });

@@ -25,6 +25,18 @@ describe('прайс клуба', () => {
     ).toBe(false);
   });
 
+  it('в прайсе — услуги зала; тренировки ведутся отдельно (ADR-059)', () => {
+    expect(
+      setClubPricesSchema.safeParse({ prices: [{ ...rent, kind: 'HALL_RENT' }] }).success,
+    ).toBe(true);
+    expect(setClubPricesSchema.safeParse({ prices: [{ ...rent, kind: 'TRAINING' }] }).success).toBe(
+      false,
+    );
+    expect(setClubPricesSchema.safeParse({ prices: [{ ...rent, kind: 'KIDS' }] }).success).toBe(
+      false,
+    );
+  });
+
   it('строк не больше потолка', () => {
     const prices = Array.from({ length: CLUB_PRICES_MAX + 1 }, () => rent);
 

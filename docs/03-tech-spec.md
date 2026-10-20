@@ -980,6 +980,7 @@ ADR-047. Отправка открыта всем, токен необязате
 GET    /api/v1/coaches                          ?search&cityId&language&page&limit   # опубликованные
 GET    /api/v1/coaches/by-slug/:slug            # публичная; непубличную — владелец и администратор
 GET    /api/v1/trainings                        ?kind&audience&age&place&clubId&cityId&priceTo&language&page&limit   # блоками по месту
+GET    /api/v1/trainings/:id                    # «Подробнее»: тренировка и другие у того же владельца
 GET    /api/v1/clubs/:id/trainings              # свои и подтверждённые тренерские
 GET    /api/v1/clubs/:id/trainings/manage       # OWNER, ORGANIZER: свои, входящие, подтверждённые
 PUT    /api/v1/clubs/:id/trainings              { trainings }   # OWNER, ORGANIZER

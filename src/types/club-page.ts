@@ -9,9 +9,27 @@ import { clubLimits } from './club-plan.js';
 
 // ---------------------------------------------------------------- цены
 
-export const PRICE_KINDS = ['TABLE_RENT', 'MEMBERSHIP', 'TRAINING', 'KIDS', 'OTHER'] as const;
+export const PRICE_KINDS = [
+  'TABLE_RENT',
+  'HALL_RENT',
+  'MEMBERSHIP',
+  'TRAINING',
+  'KIDS',
+  'OTHER',
+] as const;
 export const priceKindSchema = z.enum(PRICE_KINDS);
 export type PriceKind = z.infer<typeof priceKindSchema>;
+
+/**
+ * Что клуб пишет в прайс: услуги зала — аренда стола и зала, абонементы,
+ * прочее. Тренировки и детские группы — отдельной сущностью «Тренировки»
+ * (ADR-059, решение владельца от 20.10.2026): в прайсе они дублировались бы.
+ * `TRAINING` и `KIDS` остаются в перечне ради прежних строк, но не
+ * принимаются и в ответах прайса не отдаются.
+ */
+export const CLUB_PRICE_KINDS = ['TABLE_RENT', 'HALL_RENT', 'MEMBERSHIP', 'OTHER'] as const;
+export const clubPriceKindSchema = z.enum(CLUB_PRICE_KINDS);
+export type ClubPriceKind = z.infer<typeof clubPriceKindSchema>;
 
 /** За что цена: «за час», «за занятие», «в месяц», «за курс» или без подписи. */
 export const PRICE_UNITS = ['HOUR', 'VISIT', 'MONTH', 'COURSE', 'NONE'] as const;
@@ -25,7 +43,7 @@ export const CLUB_PRICES_MAX = 40;
 export const PRICE_KZT_MAX = 10_000_000;
 
 export const clubPriceInputSchema = z.object({
-  kind: priceKindSchema,
+  kind: clubPriceKindSchema,
   title: z.string().trim().min(1).max(100),
   /** Целые тенге: тиын в прайсе зала не бывает. */
   priceKzt: z.number().int().min(0).max(PRICE_KZT_MAX),
