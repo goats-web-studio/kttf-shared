@@ -48,6 +48,9 @@ describe('событие страницы клуба', () => {
   it('вид и источник — из перечня', () => {
     expect(clubEventSchema.safeParse({ kind: 'WHATSAPP', source: 'CAMPAIGN' }).success).toBe(true);
     expect(clubEventSchema.safeParse({ kind: 'EMAIL', source: 'ORGANIC' }).success).toBe(false);
+    expect(clubEventSchema.safeParse({ kind: 'COACH_TRAINING', source: 'ORGANIC' }).success).toBe(
+      true,
+    );
   });
 });
 

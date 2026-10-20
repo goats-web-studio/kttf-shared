@@ -125,6 +125,12 @@ export const CLUB_EVENT_KINDS = [
   'INSTAGRAM',
   'WEBSITE',
   'ROUTE',
+  /**
+   * «Записаться» к тренеру, который проводит личную тренировку в зале клуба:
+   * обращение ушло тренеру, клубу — отдельной строкой (ADR-059, решение
+   * владельца от 21.10.2026).
+   */
+  'COACH_TRAINING',
 ] as const;
 export const clubEventKindSchema = z.enum(CLUB_EVENT_KINDS);
 export type ClubEventKind = z.infer<typeof clubEventKindSchema>;
@@ -160,6 +166,8 @@ export const clubStatsRowSchema = z.object({
   instagram: z.number().int(),
   website: z.number().int(),
   route: z.number().int(),
+  /** Записи к тренерам в зале клуба. */
+  coachTraining: z.number().int(),
 });
 export type ClubStatsRow = z.infer<typeof clubStatsRowSchema>;
 

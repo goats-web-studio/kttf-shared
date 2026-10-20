@@ -296,6 +296,9 @@ describe('статистика и тариф', () => {
       true,
     );
     expect(coachEventSchema.safeParse({ kind: 'ROUTE', source: 'ORGANIC' }).success).toBe(false);
+    expect(coachEventSchema.safeParse({ kind: 'CLUB_GROUP', source: 'ORGANIC' }).success).toBe(
+      true,
+    );
   });
 
   it('окно — 30 дней по умолчанию, не глубже предела', () => {

@@ -811,7 +811,19 @@ export type SetCoachHiddenInput = z.infer<typeof setCoachHiddenSchema>;
 // ---------------------------------------------------------------- статистика
 
 /** Просмотр страницы и нажатия на способы связи — механика `ClubStatDaily`. */
-export const COACH_EVENT_KINDS = ['VIEW', 'PHONE', 'WHATSAPP', 'TELEGRAM', 'INSTAGRAM'] as const;
+/**
+ * `CLUB_GROUP` — «Записаться» в группу клуба, где он тренер: обращение
+ * ушло клубу, тренеру — отдельной строкой, а не в его прямые обращения
+ * (решение владельца от 21.10.2026).
+ */
+export const COACH_EVENT_KINDS = [
+  'VIEW',
+  'PHONE',
+  'WHATSAPP',
+  'TELEGRAM',
+  'INSTAGRAM',
+  'CLUB_GROUP',
+] as const;
 export const coachEventKindSchema = z.enum(COACH_EVENT_KINDS);
 export type CoachEventKind = z.infer<typeof coachEventKindSchema>;
 
@@ -835,6 +847,8 @@ export const coachStatsRowSchema = z.object({
   whatsapp: z.number().int(),
   telegram: z.number().int(),
   instagram: z.number().int(),
+  /** Записи в группы клуба, где он тренер. */
+  clubGroup: z.number().int(),
 });
 export type CoachStatsRow = z.infer<typeof coachStatsRowSchema>;
 
