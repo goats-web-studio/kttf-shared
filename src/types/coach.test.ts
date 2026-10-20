@@ -19,6 +19,7 @@ import {
   setCoachHiddenSchema,
   setClubTrainingsSchema,
   setCoachTrainingsSchema,
+  trainingBookingTarget,
   trainingOwner,
   updateCoachSchema,
 } from './coach.js';
@@ -365,6 +366,46 @@ describe('владелец тренировки', () => {
       setCoachTrainingsSchema.safeParse({
         trainings: [{ ...group, description: 'а'.repeat(1001) }],
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe('кто записывает', () => {
+  const club = { id: ID, name: 'KTTF Тест' };
+  const coach = { id: OTHER, slug: 'petrov-aleksey' };
+  const as = (value: unknown) => value as Parameters<typeof trainingBookingTarget>[0];
+
+  it('своя тренировка тренера с записью через клуб — пишут клубу', () => {
+    expect(trainingBookingTarget(as({ author: 'COACH', booking: 'CLUB', club, coach }))).toEqual({
+      kind: 'CLUB',
+      club,
+    });
+  });
+
+  it('лично у тренера — тренеру; группа клуба — клубу', () => {
+    expect(trainingBookingTarget(as({ author: 'COACH', booking: 'COACH', club, coach }))).toEqual({
+      kind: 'COACH',
+      coach,
+    });
+    expect(trainingBookingTarget(as({ author: 'CLUB', booking: 'CLUB', club, coach }))).toEqual({
+      kind: 'CLUB',
+      club,
+    });
+  });
+
+  it('клуба не видно — пишут тренеру', () => {
+    expect(
+      trainingBookingTarget(as({ author: 'COACH', booking: 'CLUB', club: null, coach })),
+    ).toEqual({ kind: 'COACH', coach });
+  });
+
+  it('через клуб — только в клубе KTTF', () => {
+    const ok = (row: unknown) => setCoachTrainingsSchema.safeParse({ trainings: [row] }).success;
+
+    expect(ok({ ...group, booking: 'CLUB' })).toBe(true);
+    expect(ok({ ...group, booking: 'COACH' })).toBe(true);
+    expect(
+      ok({ ...group, clubId: null, venueName: 'СК', venueAddress: 'Абая, 1', booking: 'CLUB' }),
     ).toBe(false);
   });
 });

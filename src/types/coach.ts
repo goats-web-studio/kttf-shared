@@ -268,6 +268,15 @@ export const TRAINING_LINKS = ['NONE', 'PENDING', 'CONFIRMED', 'DECLINED'] as co
 export const trainingLinkSchema = z.enum(TRAINING_LINKS);
 export type TrainingLink = z.infer<typeof trainingLinkSchema>;
 
+/**
+ * Кто записывает и принимает оплату (решение владельца от 21.10.2026).
+ * Группа клуба — всегда клуб. Своя тренировка тренера в клубе KTTF — по
+ * выбору тренера: лично или через клуб; в остальных местах — тренер.
+ */
+export const TRAINING_BOOKINGS = ['COACH', 'CLUB'] as const;
+export const trainingBookingSchema = z.enum(TRAINING_BOOKINGS);
+export type TrainingBooking = z.infer<typeof trainingBookingSchema>;
+
 /** Возраст ребёнка, с которого берут: от трёх лет до семнадцати. */
 const kidsAge = z.number().int().min(3).max(17);
 
@@ -368,10 +377,19 @@ export const coachTrainingInputSchema = z
     /** Зал вне KTTF: название и адрес. */
     venueName: text(100).nullable().optional(),
     venueAddress: text(200).nullable().optional(),
+    /** Кто записывает и принимает оплату. «Через клуб» — только в клубе KTTF. */
+    booking: trainingBookingSchema.optional(),
   })
   .superRefine((value, ctx) => {
     kidsAgeForChildren(value, ctx);
     placeIsNamed(value, ctx);
+    if (value.booking === 'CLUB' && (value.clubId === undefined || value.clubId === null)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['booking'],
+        message: 'Запись через клуб — только у тренировки в клубе KTTF',
+      });
+    }
   });
 export type CoachTrainingInput = z.infer<typeof coachTrainingInputSchema>;
 
@@ -468,6 +486,8 @@ export const trainingViewSchema = z.object({
   venue: trainingVenueSchema.nullable(),
   coach: trainingCoachRefSchema.nullable(),
   link: trainingLinkSchema,
+  /** Кто записывает: у группы клуба — `CLUB`, у своей тренировки тренера — его выбор. */
+  booking: trainingBookingSchema,
   title: z.string(),
   schedule: z.string().nullable(),
   priceKzt: z.number().int().nullable(),
@@ -486,7 +506,7 @@ export type TrainingOwner =
   | { readonly kind: 'CLUB'; readonly club: TrainingClubRef }
   | { readonly kind: 'COACH'; readonly coach: TrainingCoachRef };
 
-/** Кому писать «Записаться». `null` — владельца не видно смотрящему. */
+/** Кто завёл тренировку. `null` — владельца не видно смотрящему. */
 export function trainingOwner(
   training: Pick<TrainingView, 'author' | 'club' | 'coach'>,
 ): TrainingOwner | null {
@@ -495,6 +515,21 @@ export function trainingOwner(
   }
 
   return training.coach === null ? null : { kind: 'COACH', coach: training.coach };
+}
+
+/**
+ * Кому писать «Записаться»: клубу у группы клуба и у тренировки тренера
+ * с записью через клуб, иначе тренеру. Вторая сторона получает нажатие
+ * отдельной строкой статистики. `null` — писать некому.
+ */
+export function trainingBookingTarget(
+  training: Pick<TrainingView, 'author' | 'booking' | 'club' | 'coach'>,
+): TrainingOwner | null {
+  if (training.author === 'COACH' && training.booking === 'CLUB' && training.club !== null) {
+    return { kind: 'CLUB', club: training.club };
+  }
+
+  return trainingOwner(training);
 }
 
 /** Сколько других тренировок владельца на странице тренировки. */
@@ -812,9 +847,10 @@ export type SetCoachHiddenInput = z.infer<typeof setCoachHiddenSchema>;
 
 /** Просмотр страницы и нажатия на способы связи — механика `ClubStatDaily`. */
 /**
- * `CLUB_GROUP` — «Записаться» в группу клуба, где он тренер: обращение
- * ушло клубу, тренеру — отдельной строкой, а не в его прямые обращения
- * (решение владельца от 21.10.2026).
+ * `CLUB_GROUP` — «Записаться» через клуб на тренировку, где он тренер:
+ * группу клуба или свою с записью через клуб. Обращение ушло клубу,
+ * тренеру — отдельной строкой, а не в его прямые обращения (решение
+ * владельца от 21.10.2026).
  */
 export const COACH_EVENT_KINDS = [
   'VIEW',
@@ -847,7 +883,7 @@ export const coachStatsRowSchema = z.object({
   whatsapp: z.number().int(),
   telegram: z.number().int(),
   instagram: z.number().int(),
-  /** Записи в группы клуба, где он тренер. */
+  /** Записи через клуб на тренировки, где он тренер. */
   clubGroup: z.number().int(),
 });
 export type CoachStatsRow = z.infer<typeof coachStatsRowSchema>;
