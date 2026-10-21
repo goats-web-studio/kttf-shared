@@ -107,6 +107,11 @@ export const COACH_PLANS_ENABLED = false;
 
 export interface CoachPlanLimits {
   readonly trainings: number;
+  /** Фото и видео в галерее, записей в месяц (`null` — без предела), закреплённых — как у клуба. */
+  readonly photos: number;
+  readonly videos: number;
+  readonly postsPerMonth: number | null;
+  readonly pinnedPosts: number;
   readonly credentials: number;
   readonly achievements: number;
   /** Глубина статистики в днях. */
@@ -115,8 +120,26 @@ export interface CoachPlanLimits {
 
 /** Черновик лимитов. Числа обсуждаются с владельцем до включения тарифов. */
 export const COACH_PLAN_LIMITS: Readonly<Record<CoachPlan, CoachPlanLimits>> = {
-  FREE: { trainings: 5, credentials: 5, achievements: 10, statsDays: 30 },
-  PRO: { trainings: 20, credentials: 20, achievements: 40, statsDays: 365 },
+  FREE: {
+    trainings: 5,
+    credentials: 5,
+    achievements: 10,
+    statsDays: 30,
+    photos: 12,
+    videos: 2,
+    postsPerMonth: 4,
+    pinnedPosts: 0,
+  },
+  PRO: {
+    trainings: 20,
+    credentials: 20,
+    achievements: 40,
+    statsDays: 365,
+    photos: 100,
+    videos: 20,
+    postsPerMonth: null,
+    pinnedPosts: 1,
+  },
 };
 
 /** Лимиты, которые действуют сейчас: план тренера или, пока тарифы выключены, защитный предел. */

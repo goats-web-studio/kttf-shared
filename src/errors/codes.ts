@@ -116,6 +116,11 @@ export const ERROR_CODES = {
   TRAINING_LINK_INVALID: 'TRAINING_LINK_INVALID',
   /** Подтвердить можно только связь со штабом, которая ждёт ответа этой стороны; дважды в штаб не берут. */
   CLUB_COACH_INVALID: 'CLUB_COACH_INVALID',
+  /**
+   * Предел тарифа страницы тренера: фото, видео, записей в месяц или
+   * закреплённых (`coachLimits`). `details.limit`, `details.max` — как у клуба.
+   */
+  COACH_PLAN_LIMIT: 'COACH_PLAN_LIMIT',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

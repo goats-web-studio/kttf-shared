@@ -1014,6 +1014,20 @@ DELETE /api/v1/coaches/:id/students/:playerId   # тренер убирает с
 POST   /api/v1/coaches/:id/students/me          # «Я ученик»
 DELETE /api/v1/coaches/:id/students/me          # больше не ученик
 
+GET    /api/v1/coaches/:id/posts             ?archive&page&limit   # публичные; /posts/all — владельцу
+POST   /api/v1/coaches/:id/posts             { kind, title, body, imageUrl?, validUntil? }
+PATCH  /api/v1/coaches/:id/posts/:postId     # и pinned
+DELETE /api/v1/coaches/:id/posts/:postId
+GET    /api/v1/coaches/:id/media             # публичные; /media/all — владельцу
+POST   /api/v1/coaches/:id/media/photos      multipart file
+POST   /api/v1/coaches/:id/media/videos      { url, caption? }
+PUT    /api/v1/coaches/:id/media/order       { ids }
+PATCH  /api/v1/coaches/:id/media/:mediaId    { caption }
+DELETE /api/v1/coaches/:id/media/:mediaId
+GET    /api/v1/admin/coach-content           ?page&limit   # лента для модерации
+PATCH  /api/v1/admin/coach-content/posts/:postId   { hidden, reason? }
+PATCH  /api/v1/admin/coach-content/media/:mediaId  { hidden, reason? }
+
 GET    /api/v1/admin/coaches                    ?status&page&limit
 POST   /api/v1/admin/coaches/:id/approve
 POST   /api/v1/admin/coaches/:id/reject         { reason }
