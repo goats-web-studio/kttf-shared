@@ -4,6 +4,13 @@ import { TELEGRAM_PATTERN, contactKindSchema } from './club.js';
 import { PRICE_KZT_MAX, priceUnitSchema, trafficSourceSchema } from './club-page.js';
 import { pageQuerySchema } from './pagination.js';
 import { cityRefSchema } from './place.js';
+import {
+  TIMES_OF_DAY,
+  timeOfDaySchema,
+  trainingEnrollmentSchema,
+  trainingSlotSchema,
+  trainingSlotsSchema,
+} from './training-schedule.js';
 
 /**
  * Раздел «Тренировки» — ADR-059, `docs/11`, этап T1: страница тренера по
@@ -314,8 +321,12 @@ const trainingFields = {
   /** «Дети с 6 лет» — только у детской или подростковой аудитории. */
   kidsFromAge: kidsAge.nullable().optional(),
   title: text(100),
-  /** Расписание строкой: «пн, ср, пт 18:00–19:30». */
+  /** Занятия по дням (T3); пусто — расписания по дням нет. */
+  slots: trainingSlotsSchema.optional(),
+  /** Примечание к расписанию: «кроме праздников», «по договорённости». */
   schedule: text(200).nullable().optional(),
+  /** Набор: есть места, мало мест, закрыт; `null` — не указано. */
+  enrollment: trainingEnrollmentSchema.nullable().optional(),
   /** Целые тенге. Без цены — «по договорённости». */
   priceKzt: z.number().int().min(0).max(PRICE_KZT_MAX).nullable().optional(),
   unit: priceUnitSchema,
@@ -513,6 +524,9 @@ export const trainingViewSchema = z.object({
   booking: trainingBookingSchema,
   title: z.string(),
   schedule: z.string().nullable(),
+  /** Занятия по дням, по порядку недели. */
+  slots: z.array(trainingSlotSchema),
+  enrollment: trainingEnrollmentSchema.nullable(),
   priceKzt: z.number().int().nullable(),
   unit: priceUnitSchema,
   note: z.string().nullable(),
@@ -877,13 +891,33 @@ export const listTrainingsSchema = pageQuerySchema.extend({
   priceTo: z.coerce.number().int().min(0).max(PRICE_KZT_MAX).optional(),
   /** Язык тренера; у клубной тренировки без тренера фильтр не проверить — она не попадает. */
   language: coachLanguageSchema.optional(),
+  /** Дни недели занятий: хотя бы одно занятие в любой из них (1 — пн). */
+  day: commaSeparated
+    .pipe(
+      z
+        .array(
+          z
+            .string()
+            .regex(/^[1-7]$/)
+            .transform(Number),
+        )
+        .min(1)
+        .max(7),
+    )
+    .optional(),
+  /** Время суток начала занятия; вместе с `day` — у одного и того же занятия. */
+  time: commaSeparated.pipe(z.array(timeOfDaySchema).min(1).max(TIMES_OF_DAY.length)).optional(),
+  /** Только где идёт набор: есть места или мало мест. */
+  open: z.stringbool().optional(),
 });
 export type ListTrainingsQuery = z.infer<typeof listTrainingsSchema>;
 
 export type ListTrainingsRequest = Omit<
   ListTrainingsQuery,
-  'kind' | 'audience' | 'place' | 'cityId'
+  'kind' | 'audience' | 'place' | 'cityId' | 'day' | 'time'
 > & {
+  readonly day?: readonly number[];
+  readonly time?: readonly (typeof TIMES_OF_DAY)[number][];
   readonly kind?: readonly TrainingKind[];
   readonly audience?: readonly TrainingAudience[];
   readonly place?: readonly TrainingPlace[];

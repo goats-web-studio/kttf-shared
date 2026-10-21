@@ -25,3 +25,4 @@ export * from './standings.js';
 export * from './sync.js';
 export * from './tournament.js';
 export * from './tournament-format.js';
+export * from './training-schedule.js';
