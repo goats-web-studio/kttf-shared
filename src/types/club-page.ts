@@ -168,6 +168,8 @@ export const clubStatsRowSchema = z.object({
   route: z.number().int(),
   /** Записи к тренерам в зале клуба. */
   coachTraining: z.number().int(),
+  /** Заявки на пробную с сайта (ADR-059, T3). */
+  trialRequests: z.number().int(),
 });
 export type ClubStatsRow = z.infer<typeof clubStatsRowSchema>;
 

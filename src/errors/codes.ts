@@ -126,6 +126,15 @@ export const ERROR_CODES = {
    * — история, по ней считаются медали учеников (T3).
    */
   REGISTRATION_COACH_LOCKED: 'REGISTRATION_COACH_LOCKED',
+
+  // ---------- заявка на пробную: ADR-059, T3 ----------
+
+  /** У человека уже есть новая заявка на эту тренировку: ждёт ответа. */
+  TRIAL_REQUEST_EXISTS: 'TRIAL_REQUEST_EXISTS',
+  /** Предел заявок за сутки (`TRIAL_REQUESTS_PER_DAY`). `details.max` — его величина. */
+  TRIAL_REQUEST_LIMIT: 'TRIAL_REQUEST_LIMIT',
+  /** Ответить или отозвать можно только новую заявку. `details.status` — текущий. */
+  TRIAL_REQUEST_INVALID: 'TRIAL_REQUEST_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

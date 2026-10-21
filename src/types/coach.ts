@@ -1010,6 +1010,8 @@ export const coachStatsRowSchema = z.object({
   instagram: z.number().int(),
   /** Записи через клуб на тренировки, где он тренер. */
   clubGroup: z.number().int(),
+  /** Заявки на пробную с сайта (T3). */
+  trialRequests: z.number().int(),
 });
 export type CoachStatsRow = z.infer<typeof coachStatsRowSchema>;
 
