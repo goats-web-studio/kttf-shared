@@ -122,6 +122,8 @@ export const clubMediaViewSchema = z.object({
   caption: z.string().nullable(),
   createdAt: z.iso.datetime(),
   hidden: z.boolean(),
+  /** Причину скрытия видит владелец клуба, как у записей. */
+  hiddenReason: z.string().nullable(),
 });
 export type ClubMediaView = z.infer<typeof clubMediaViewSchema>;
 
