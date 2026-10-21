@@ -210,6 +210,7 @@ describe('игрок в ответе', () => {
       coachSlug: null,
       coachSince: null,
       coachHistory: [],
+      ownCoachSlug: null,
       birthYearOnly: true,
       lastSeenAt: null,
       online: false,
