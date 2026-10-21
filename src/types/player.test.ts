@@ -208,6 +208,8 @@ describe('игрок в ответе', () => {
       coachPlayerId: null,
       coachName: 'Сериков Тимур',
       coachSlug: null,
+      coachSince: null,
+      coachHistory: [],
       birthYearOnly: true,
       lastSeenAt: null,
       online: false,

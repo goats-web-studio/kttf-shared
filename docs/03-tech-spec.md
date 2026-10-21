@@ -1001,6 +1001,19 @@ GET    /api/v1/coaches/:id/stats                ?days
 POST   /api/v1/files/coaches/:id                multipart file → { url, width, height }
 POST   /api/v1/files/coach-docs/:id             multipart file → { url }
 
+GET    /api/v1/clubs/:id/staff                  # штаб: ACTIVE с опубликованной страницей
+GET    /api/v1/clubs/:id/staff/manage           # OWNER, ORGANIZER: состав, приглашённые, запросы
+POST   /api/v1/clubs/:id/staff                  { coachId, position? }   # клуб приглашает
+PATCH  /api/v1/clubs/:id/staff/:coachId         { position }
+POST   /api/v1/coaches/:id/clubs                { clubId, position? }    # тренер просится
+POST   /api/v1/club-coaches/:clubId/:coachId/confirm   # вторая сторона
+DELETE /api/v1/club-coaches/:clubId/:coachId           # любая сторона
+GET    /api/v1/coaches/:id/students             # ученики: числа, топ с 14 лет, медали, рост
+GET    /api/v1/coaches/:id/students/manage      ?page&limit   # владелец: все текущие
+DELETE /api/v1/coaches/:id/students/:playerId   # тренер убирает ссылку на себя
+POST   /api/v1/coaches/:id/students/me          # «Я ученик»
+DELETE /api/v1/coaches/:id/students/me          # больше не ученик
+
 GET    /api/v1/admin/coaches                    ?status&page&limit
 POST   /api/v1/admin/coaches/:id/approve
 POST   /api/v1/admin/coaches/:id/reject         { reason }

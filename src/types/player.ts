@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { productListItemViewSchema } from './catalog.js';
+import { coachTenureViewSchema } from './coach-students.js';
 import { pageQuerySchema } from './pagination.js';
 import { cityRefSchema } from './place.js';
 
@@ -379,6 +380,13 @@ export const playerProfileViewSchema = playerViewSchema.extend({
    * тренер ссылкой на неё. `null` — тренер вписан строкой или страницы нет.
    */
   coachSlug: z.string().nullable(),
+  /**
+   * С какого дня текущий тренер выбран в анкете (ADR-059, T2); `null` —
+   * тренер вписан строкой или не указан.
+   */
+  coachSince: z.iso.datetime().nullable(),
+  /** Прежние тренеры из истории, последние первыми. */
+  coachHistory: z.array(coachTenureViewSchema),
   /**
    * Последнее посещение сайта — ADR-050. Пишется не чаще раза в пять минут,
    * поэтому точнее этого окна не бывает. `null` — у игрока нет аккаунта или

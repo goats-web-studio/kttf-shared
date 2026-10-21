@@ -4,7 +4,11 @@ import { authUserViewSchema } from './auth.js';
 import {
   COACH_PLAN_LIMITS,
   canSubmitCoach,
+  clubCoachAwaits,
   coachCredentialFilePath,
+  inviteClubCoachSchema,
+  requestClubCoachSchema,
+  updateClubCoachSchema,
   coachEventSchema,
   coachImageVariant,
   coachLimits,
@@ -407,5 +411,23 @@ describe('кто записывает', () => {
     expect(
       ok({ ...group, clubId: null, venueName: 'СК', venueAddress: 'Абая, 1', booking: 'CLUB' }),
     ).toBe(false);
+  });
+});
+
+describe('тренерский штаб', () => {
+  it('клуб приглашает, тренер просится — должность необязательна', () => {
+    expect(
+      inviteClubCoachSchema.safeParse({ coachId: ID, position: 'Детский тренер' }).success,
+    ).toBe(true);
+    expect(requestClubCoachSchema.safeParse({ clubId: OTHER }).success).toBe(true);
+    expect(updateClubCoachSchema.safeParse({ position: null }).success).toBe(true);
+    expect(updateClubCoachSchema.safeParse({ position: 'а'.repeat(61) }).success).toBe(false);
+  });
+
+  it('ответ ждёт вторая сторона', () => {
+    expect(clubCoachAwaits('REQUESTED_BY_COACH', 'CLUB')).toBe(true);
+    expect(clubCoachAwaits('REQUESTED_BY_COACH', 'COACH')).toBe(false);
+    expect(clubCoachAwaits('INVITED_BY_CLUB', 'COACH')).toBe(true);
+    expect(clubCoachAwaits('ACTIVE', 'CLUB')).toBe(false);
   });
 });

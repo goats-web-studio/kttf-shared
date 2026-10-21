@@ -138,6 +138,8 @@ export const listClubsSchema = pageQuerySchema.extend({
     .optional(),
   /** Только клубы с ближайшим или идущим турниром. */
   upcoming: z.stringbool().optional(),
+  /** Только клубы с опубликованной тренировкой для детей или подростков (ADR-059). */
+  kids: z.stringbool().optional(),
   /** Клубы, где стоит этот стол, — «Где стоит» на странице товара (ADR-058). */
   tableProductId: z.uuid().optional(),
 });
@@ -210,6 +212,10 @@ export type ClubView = z.infer<typeof clubViewSchema>;
 export const clubListItemViewSchema = clubViewSchema.extend({
   /** Начало ближайшего или идущего турнира; `null`, если впереди ничего нет. */
   nextTournamentAt: z.iso.datetime().nullable(),
+  /** Тренеров в штабе с опубликованной страницей (ADR-059). */
+  coachesCount: z.number().int().nonnegative(),
+  /** Есть опубликованная тренировка для детей или подростков — метка «Детские тренировки». */
+  kidsTrainings: z.boolean(),
 });
 export type ClubListItemView = z.infer<typeof clubListItemViewSchema>;
 

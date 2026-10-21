@@ -639,6 +639,69 @@ export type CoachAchievementView = z.infer<typeof coachAchievementViewSchema>;
 
 // ---------------------------------------------------------------- вид страницы
 
+// ---------------------------------------------------------------- штаб клуба
+
+/**
+ * Тренерский штаб клуба — T2 (ADR-059, решение владельца от 21.10.2026).
+ * Своя связь «клуб — тренер» с должностью. Заводит любая сторона: клуб
+ * (OWNER, ORGANIZER) приглашает, тренер просится; вторая подтверждает.
+ * Подтверждённая тренировка тренера в клубе или группа клуба с тренером
+ * добавляют его в штаб сами. Разорвать может любая сторона; тренировки
+ * при этом не трогаются.
+ */
+export const CLUB_COACH_STATUSES = ['REQUESTED_BY_COACH', 'INVITED_BY_CLUB', 'ACTIVE'] as const;
+export const clubCoachStatusSchema = z.enum(CLUB_COACH_STATUSES);
+export type ClubCoachStatus = z.infer<typeof clubCoachStatusSchema>;
+
+/** Должность строкой: «старший тренер», «детский тренер». */
+const position = text(60);
+
+/** Клуб приглашает тренера — `POST /clubs/:id/staff`. */
+export const inviteClubCoachSchema = z.object({
+  coachId: z.uuid(),
+  position: position.nullable().optional(),
+});
+export type InviteClubCoachInput = z.infer<typeof inviteClubCoachSchema>;
+
+/** Тренер просится в клуб — `POST /coaches/:id/clubs`. */
+export const requestClubCoachSchema = z.object({
+  clubId: z.uuid(),
+  position: position.nullable().optional(),
+});
+export type RequestClubCoachInput = z.infer<typeof requestClubCoachSchema>;
+
+/** Должность правит клуб — `PATCH /clubs/:id/staff/:coachId`. */
+export const updateClubCoachSchema = z.object({ position: position.nullable() });
+export type UpdateClubCoachInput = z.infer<typeof updateClubCoachSchema>;
+
+export const clubCoachViewSchema = z.object({
+  club: trainingClubRefSchema,
+  coach: trainingCoachRefSchema,
+  status: clubCoachStatusSchema,
+  position: z.string().nullable(),
+  requestedAt: z.iso.datetime(),
+  confirmedAt: z.iso.datetime().nullable(),
+});
+export type ClubCoachView = z.infer<typeof clubCoachViewSchema>;
+
+/**
+ * Штаб в кабинете клуба — `GET /clubs/:id/staff/manage`: состав,
+ * приглашённые клубом (ждут тренера) и запросы тренеров (ждут клуб).
+ * Публично — `GET /clubs/:id/staff`: только `ACTIVE` с опубликованной
+ * страницей тренера.
+ */
+export const clubStaffManageViewSchema = z.object({
+  active: z.array(clubCoachViewSchema),
+  invited: z.array(clubCoachViewSchema),
+  requests: z.array(clubCoachViewSchema),
+});
+export type ClubStaffManageView = z.infer<typeof clubStaffManageViewSchema>;
+
+/** Ждёт ли связь ответа этой стороны. Одно правило на кнопку и сервер. */
+export function clubCoachAwaits(status: ClubCoachStatus, side: 'CLUB' | 'COACH'): boolean {
+  return side === 'CLUB' ? status === 'REQUESTED_BY_COACH' : status === 'INVITED_BY_CLUB';
+}
+
 export const coachViewSchema = z.object({
   id: z.uuid(),
   slug: z.string(),
@@ -676,6 +739,11 @@ export const coachViewSchema = z.object({
   trainings: z.array(trainingViewSchema),
   /** Входящие от клубов, ждут ответа тренера. Только владельцу и администратору, иначе пусто. */
   trainingRequests: z.array(trainingViewSchema),
+  /** Клубы, где он в штабе (`ACTIVE`), с должностью. */
+  clubs: z.array(clubCoachViewSchema),
+  /** Приглашения клубов и свои запросы, ждущие ответа. Только владельцу и администратору, иначе пусто. */
+  clubInvites: z.array(clubCoachViewSchema),
+  clubRequests: z.array(clubCoachViewSchema),
   credentials: z.array(coachCredentialViewSchema),
   achievements: z.array(coachAchievementViewSchema),
   /** Игроков, выбравших его тренером в анкете (ADR-035). Младшие 14 — тоже только числом. */
