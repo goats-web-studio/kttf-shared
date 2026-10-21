@@ -17,7 +17,12 @@ import { cityRefSchema } from './place.js';
 
 const optionalText = z.string().trim().min(1).max(500);
 
-/** Удобства зала. Детская секция — тоже удобство: по ней фильтруют так же. */
+/**
+ * Удобства зала. «Детской секции» среди них больше нет (решение владельца
+ * от 21.10.2026): детей ищут по фильтру «Детские тренировки» (`kids`), он
+ * опирается на опубликованные тренировки, а не на отметку клуба. Значение
+ * `KIDS` остаётся в перечне базы ради прежних строк — сервер его не отдаёт.
+ */
 export const CLUB_AMENITIES = [
   'AIR_CONDITIONING',
   'SHOWER',
@@ -26,7 +31,6 @@ export const CLUB_AMENITIES = [
   'WIFI',
   'CAFE',
   'SHOP',
-  'KIDS',
 ] as const;
 export const clubAmenitySchema = z.enum(CLUB_AMENITIES);
 export type ClubAmenity = z.infer<typeof clubAmenitySchema>;

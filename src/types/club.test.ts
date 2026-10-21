@@ -183,7 +183,9 @@ describe('страница клуба', () => {
   });
 
   it('удобство не повторяется', () => {
-    expect(createClubSchema.safeParse({ ...base, amenities: ['WIFI', 'KIDS'] }).success).toBe(true);
+    expect(createClubSchema.safeParse({ ...base, amenities: ['WIFI', 'SHOP'] }).success).toBe(true);
+    // Детская секция ушла в фильтр «Детские тренировки» (ADR-059).
+    expect(createClubSchema.safeParse({ ...base, amenities: ['KIDS'] }).success).toBe(false);
     expect(createClubSchema.safeParse({ ...base, amenities: ['WIFI', 'WIFI'] }).success).toBe(
       false,
     );
@@ -200,12 +202,12 @@ describe('список клубов', () => {
   it('города и удобства — через запятую', () => {
     const query = listClubsSchema.parse({
       cityId: '00000000-0000-4000-8000-0000000000c1, 00000000-0000-4000-8000-0000000000c2',
-      amenities: 'KIDS,WIFI',
+      amenities: 'SHOP,WIFI',
       upcoming: 'true',
     });
 
     expect(query.cityId).toHaveLength(2);
-    expect(query.amenities).toEqual(['KIDS', 'WIFI']);
+    expect(query.amenities).toEqual(['SHOP', 'WIFI']);
     expect(query.upcoming).toBe(true);
   });
 
