@@ -26,6 +26,8 @@ export const COACH_STUDENTS_TOP = 10;
 export const COACH_MEDALS_DAYS = 30;
 /** Сколько последних медалей называть. */
 export const COACH_MEDALS_RECENT = 5;
+/** Сколько последних турниров учеников показывать. */
+export const COACH_TOURNAMENTS_RECENT = 5;
 /** Окно «лучшего роста». */
 export const COACH_GROWTH_DAYS = 182;
 /** Сколько лучших по росту показывать. */
@@ -57,6 +59,22 @@ export const studentGrowthSchema = z.object({
 export type StudentGrowth = z.infer<typeof studentGrowthSchema>;
 
 /**
+ * Турнир, где играли ученики (T3): по тренеру, указанному в записи на
+ * турнир, — учеником считается тот, кто заявился с этим тренером. Имён
+ * нет: младшие 14 входят только в числа.
+ */
+export const studentTournamentSchema = z.object({
+  tournament: z.object({ id: z.uuid(), name: z.string(), startsAt: z.iso.datetime() }),
+  /** Сыгравших учеников: снятые и не явившиеся не считаются. */
+  students: z.number().int().positive(),
+  /** Мест 1, 2 и 3 у них. */
+  gold: z.number().int().nonnegative(),
+  silver: z.number().int().nonnegative(),
+  bronze: z.number().int().nonnegative(),
+});
+export type StudentTournament = z.infer<typeof studentTournamentSchema>;
+
+/**
  * Ученики на странице тренера — `GET /coaches/:id/students`. Публично,
  * если страница опубликована. Младшие 14 входят только в числа.
  */
@@ -70,13 +88,18 @@ export const coachStudentsViewSchema = z.object({
   /** Текущие с 14 лет, сильнейшие первыми. */
   top: z.array(studentRefSchema).max(COACH_STUDENTS_TOP),
   medals: z.object({
-    /** Мест 1–3 у текущих учеников за окно — всех, включая младших. */
+    /**
+     * Мест 1–3 у учеников за окно — всех, включая младших. Учеником на
+     * турнире считается тот, кто заявился с этим тренером (T3).
+     */
     total: z.number().int().nonnegative(),
     /** Последние медали учеников с 14 лет. */
     recent: z.array(studentMedalSchema).max(COACH_MEDALS_RECENT),
   }),
   /** Лучший рост рейтинга за окно у учеников с 14 лет; только прирост. */
   growth: z.array(studentGrowthSchema).max(COACH_GROWTH_TOP),
+  /** Последние завершённые турниры, где играли ученики, — новые первыми. */
+  tournaments: z.array(studentTournamentSchema).max(COACH_TOURNAMENTS_RECENT),
 });
 export type CoachStudentsView = z.infer<typeof coachStudentsViewSchema>;
 

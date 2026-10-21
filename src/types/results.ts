@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { playerViewSchema } from './player.js';
 import { stageViewSchema } from './stage.js';
 import { tieGroupSchema, tournamentStandingsSchema } from './standings.js';
-import { registrationStatusSchema, tournamentViewSchema } from './tournament.js';
+import {
+  registrationCoachSchema,
+  registrationStatusSchema,
+  tournamentViewSchema,
+} from './tournament.js';
 
 /**
  * Публичные результаты турнира — ТЗ 9.4, маршрут ТС 7.5.
@@ -40,6 +44,8 @@ export const resultParticipantSchema = z.object({
   /** `false` — вне зачёта: играл, но результаты не рейтинговые (ТЗ 4.4). */
   isRated: z.boolean(),
   seed: z.number().int().nullable(),
+  /** Тренер на этом турнире (ADR-059, T3). */
+  coach: registrationCoachSchema.nullable().default(null),
 });
 export type ResultParticipantView = z.infer<typeof resultParticipantSchema>;
 

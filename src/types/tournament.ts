@@ -252,6 +252,38 @@ export const tournamentViewSchema = z.object({
 });
 export type TournamentView = z.infer<typeof tournamentViewSchema>;
 
+/**
+ * Тренер участника на этом турнире — ADR-059, T3.
+ *
+ * Снимок анкеты: при записи копируется из профиля и до старта идёт за
+ * анкетой, если его не правили руками; после старта не меняется. Медали
+ * ученика на странице тренера считаются по нему, а не по тому, кто тренирует
+ * игрока сегодня.
+ */
+export const registrationCoachSchema = z.object({
+  /** Игрок-тренер, если выбран из списка; `null` — вписан строкой. */
+  playerId: z.uuid().nullable(),
+  name: z.string(),
+  /** Адрес опубликованной страницы тренера — тогда он ссылкой. */
+  slug: z.string().nullable(),
+});
+export type RegistrationCoach = z.infer<typeof registrationCoachSchema>;
+
+/**
+ * Тренер на турнире — `PUT /tournaments/:id/registrations/:registrationId/coach`.
+ * Правят сам игрок и организатор, до старта. Оба `null` — без тренера.
+ */
+export const setRegistrationCoachSchema = z
+  .object({
+    coachPlayerId: z.uuid().nullable(),
+    coachName: z.string().trim().min(1).max(100).nullable(),
+  })
+  .refine((value) => value.coachPlayerId === null || value.coachName === null, {
+    path: ['coachName'],
+    message: 'Тренер выбирается из списка либо вписывается вручную, но не разом',
+  });
+export type SetRegistrationCoachInput = z.infer<typeof setRegistrationCoachSchema>;
+
 export const registrationViewSchema = z.object({
   id: z.uuid(),
   tournamentId: z.uuid(),
@@ -264,6 +296,11 @@ export const registrationViewSchema = z.object({
   matchesAtStart: z.number().int().nullable(),
   createdAt: z.iso.datetime(),
   player: playerViewSchema,
+  /**
+   * Со значением по умолчанию: снимок турнира на диске браузера (ТС 6),
+   * сделанный раньше, иначе не прошёл бы схему.
+   */
+  coach: registrationCoachSchema.nullable().default(null),
 });
 export type RegistrationView = z.infer<typeof registrationViewSchema>;
 

@@ -44,6 +44,15 @@ describe('ученики тренера', () => {
         ],
       },
       growth: [{ player: student, delta: '+42.10' }],
+      tournaments: [
+        {
+          tournament: { id: ID, name: 'Кубок зала', startsAt: '2026-10-18T12:00:00.000Z' },
+          students: 3,
+          gold: 1,
+          silver: 0,
+          bronze: 1,
+        },
+      ],
     };
 
     expect(coachStudentsViewSchema.parse(view)).toEqual(view);
@@ -70,6 +79,7 @@ describe('ученики тренера', () => {
         top: [],
         medals: { total: 0, recent: [medal] },
         growth: [],
+        tournaments: [],
       }).success,
     ).toBe(false);
   });

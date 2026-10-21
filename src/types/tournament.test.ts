@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createTournamentSchema,
   registrationViewSchema,
+  setRegistrationCoachSchema,
   updateRegistrationSchema,
   updateTournamentSchema,
   listTournamentsSchema,
@@ -337,10 +338,30 @@ describe('участник в ответе', () => {
       },
     };
 
-    expect(registrationViewSchema.parse(registration)).toEqual(registration);
+    expect(registrationViewSchema.parse(registration)).toEqual({ ...registration, coach: null });
     expect(registrationViewSchema.safeParse({ ...registration, ratingAtStart: 250 }).success).toBe(
       false,
     );
+  });
+});
+
+describe('тренер на турнире (ADR-059, T3)', () => {
+  it('из списка, строкой или без тренера — но не разом', () => {
+    expect(setRegistrationCoachSchema.parse({ coachPlayerId: CLUB_ID, coachName: null })).toEqual({
+      coachPlayerId: CLUB_ID,
+      coachName: null,
+    });
+    expect(
+      setRegistrationCoachSchema.parse({ coachPlayerId: null, coachName: '  Ким Ольга ' }),
+    ).toEqual({ coachPlayerId: null, coachName: 'Ким Ольга' });
+    expect(
+      setRegistrationCoachSchema.safeParse({ coachPlayerId: null, coachName: null }).success,
+    ).toBe(true);
+    expect(
+      setRegistrationCoachSchema.safeParse({ coachPlayerId: CLUB_ID, coachName: 'Ким Ольга' })
+        .success,
+    ).toBe(false);
+    expect(setRegistrationCoachSchema.safeParse({ coachPlayerId: null }).success).toBe(false);
   });
 });
 

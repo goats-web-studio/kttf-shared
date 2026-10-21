@@ -121,6 +121,11 @@ export const ERROR_CODES = {
    * закреплённых (`coachLimits`). `details.limit`, `details.max` — как у клуба.
    */
   COACH_PLAN_LIMIT: 'COACH_PLAN_LIMIT',
+  /**
+   * Тренер участника правится только до старта турнира: после него запись
+   * — история, по ней считаются медали учеников (T3).
+   */
+  REGISTRATION_COACH_LOCKED: 'REGISTRATION_COACH_LOCKED',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
