@@ -30,6 +30,12 @@ export const screenViewSchema = z.object({
    * канале, который в зале и так узкий.
    */
   players: z.array(playerViewSchema),
+  /**
+   * Снявшиеся и не явившиеся — ADR-061. Их несыгранные встречи решены
+   * снятием (`isDecidedByWithdrawal`), и в «Кто следующий» им не место.
+   * По умолчанию пусто: экран, собранный сервером до этого поля, читается.
+   */
+  withdrawn: z.array(z.uuid()).default([]),
   standings: tournamentStandingsSchema,
   stages: z.array(stageViewSchema),
   /**

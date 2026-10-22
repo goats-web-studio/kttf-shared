@@ -130,7 +130,12 @@ describe('состояние второго экрана', () => {
       'standings',
       'tournament',
       'updatedAt',
+      'withdrawn',
     ]);
+  });
+
+  it('снявшиеся без поля читаются пустым списком — ADR-061', () => {
+    expect(screenViewSchema.parse(view).withdrawn).toEqual([]);
   });
 
   it('журнала рейтинга в ответе нет', () => {
