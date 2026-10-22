@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { selectAdvancing, type GroupPlacement } from './group-advance.js';
-import { buildKnockout } from './knockout.js';
+import { matchAll, selectAdvancing, type GroupPlacement } from './group-advance.js';
+import { buildKnockout, nextPowerOfTwo, seedOrder } from './knockout.js';
 
 /** Группа с местами по порядку: первый в списке занял первое место. */
 function group(label: string, ordered: readonly string[], unresolved = []): GroupPlacement {
@@ -10,6 +10,26 @@ function group(label: string, ordered: readonly string[], unresolved = []): Grou
     rows: ordered.map((participant, index) => ({ participant, place: index + 1 })),
     unresolved,
   };
+}
+
+/** Половина сетки, где стоит участник: в разных половинах встречаются только в финале. */
+function halfOf(seeded: readonly string[], participant: string): 'top' | 'bottom' {
+  const size = nextPowerOfTwo(seeded.length);
+  const position = seedOrder(size).indexOf(seeded.indexOf(participant) + 1);
+
+  return position < size / 2 ? 'top' : 'bottom';
+}
+
+/** Группы `a`, `b`, … по `size` человек: `a1` — победитель группы `a`. */
+function groups(count: number, size: number): GroupPlacement[] {
+  return Array.from({ length: count }, (_unused, index) => {
+    const letter = String.fromCharCode(97 + index);
+
+    return group(
+      `гр. ${String(index + 1)}`,
+      Array.from({ length: size }, (_skip, place) => `${letter}${String(place + 1)}`),
+    );
+  });
 }
 
 describe('selectAdvancing', () => {
@@ -28,17 +48,47 @@ describe('selectAdvancing', () => {
   });
 
   it('посев идёт по местам: сначала все первые, затем все вторые', () => {
-    const selection = selectAdvancing(
-      [
-        group('гр. 1', ['a1', 'a2']),
-        group('гр. 2', ['b1', 'b2']),
-        group('гр. 3', ['c1', 'c2']),
-        group('гр. 4', ['d1', 'd2']),
-      ],
-      2,
-    );
+    const selection = selectAdvancing(groups(4, 2), 2);
 
-    expect(selection.seeded).toEqual(['a1', 'b1', 'c1', 'd1', 'a2', 'b2', 'c2', 'd2']);
+    expect(selection.seeded.slice(0, 4)).toEqual(['a1', 'b1', 'c1', 'd1']);
+    expect([...selection.seeded.slice(4)].sort()).toEqual(['a2', 'b2', 'c2', 'd2']);
+  });
+
+  it('одногруппники в разных половинах сетки — встретятся только в финале', () => {
+    // Раньше вторые места шли в порядке групп: при четырёх группах A1 и A2
+    // попадали в одну половину и встречались в полуфинале.
+    for (let count = 2; count <= 16; count += 1) {
+      const selection = selectAdvancing(groups(count, 3), 2);
+
+      for (let index = 0; index < count; index += 1) {
+        const letter = String.fromCharCode(97 + index);
+
+        expect(
+          halfOf(selection.seeded, `${letter}1`),
+          `${String(count)} групп, группа ${letter}`,
+        ).not.toBe(halfOf(selection.seeded, `${letter}2`));
+      }
+    }
+  });
+
+  it('вторые места при восьми группах — как у RTTF: 7, 8, 5, 6, 3, 4, 1, 2', () => {
+    // Протокол RTTF «Группы + Сетка» на 16: посевы 9–16 — вторые места
+    // групп 7, 8, 5, 6, 3, 4, 1, 2 (docs/research/rttf-tm, раздел 4.3).
+    const selection = selectAdvancing(groups(8, 3), 2);
+
+    expect(selection.seeded.slice(8)).toEqual(['g2', 'h2', 'e2', 'f2', 'c2', 'd2', 'a2', 'b2']);
+  });
+
+  it('третьи места не попадают в четверть ни к первому, ни ко второму своей группы', () => {
+    const selection = selectAdvancing(groups(4, 3), 3);
+    const size = nextPowerOfTwo(selection.seeded.length);
+    const quarter = (participant: string): number =>
+      Math.floor(seedOrder(size).indexOf(selection.seeded.indexOf(participant) + 1) / (size / 4));
+
+    for (const letter of ['a', 'b', 'c', 'd']) {
+      expect(quarter(`${letter}3`)).not.toBe(quarter(`${letter}1`));
+      expect(quarter(`${letter}3`)).not.toBe(quarter(`${letter}2`));
+    }
   });
 
   it('одногруппники не встречаются в первом круге плей-офф', () => {
@@ -187,5 +237,38 @@ describe('не вышедшие из групп — сетка за места, 
     );
 
     expect(selection.exits).toEqual([]);
+  });
+});
+
+describe('посев блока — паросочетание, ADR-061', () => {
+  const entries = [
+    { participant: 'x', group: 0 },
+    { participant: 'y', group: 1 },
+  ];
+  const anywhere = (): number => 1;
+
+  it('занятый посев освобождается, если прежнему владельцу есть куда уйти', () => {
+    const owners = matchAll(entries, [[1, 2], [1]], anywhere, 1);
+
+    expect(owners).toEqual(
+      new Map([
+        [2, 0],
+        [1, 1],
+      ]),
+    );
+  });
+
+  it('двоим на один посев места нет', () => {
+    expect(matchAll(entries, [[1], [1]], anywhere, 1)).toBeNull();
+  });
+});
+
+describe('не вышедшие из групп — разведение одногруппников, ADR-061', () => {
+  it('третий и четвёртый одной группы — в разных половинах сетки за места', () => {
+    const selection = selectAdvancing(groups(4, 4), 2);
+
+    for (const letter of ['a', 'b', 'c', 'd']) {
+      expect(halfOf(selection.exits, `${letter}3`)).not.toBe(halfOf(selection.exits, `${letter}4`));
+    }
   });
 });
