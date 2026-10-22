@@ -60,18 +60,14 @@ export function finalGroupsPlacement(input: PlacementInput): Placement {
     offset += group.standings.rows.length;
   }
 
-  // Схема задумана так, что финальные группы забирают всех. Если кто-то
-  // всё-таки остался за бортом, его место не определено, а не равно нулю.
+  // Кто не попал ни в одну финальную группу, выбыл на групповом этапе: из
+  // группы выходят не все (`advancePerGroup`). Пока финальных групп нет,
+  // групповой этап ещё идёт, и место не определено ни у кого.
   const seen = new Set(rows.map((row) => row.participant));
   const missed = participantsOfGroups(input.groups).filter((participant) => !seen.has(participant));
+  const reason = input.finalGroups.length === 0 ? 'UNDECIDED' : 'GROUP_EXIT';
 
-  rows.push(
-    ...missed.map((participant): PlacementRow => ({
-      participant,
-      place: null,
-      reason: 'UNDECIDED',
-    })),
-  );
+  rows.push(...missed.map((participant): PlacementRow => ({ participant, place: null, reason })));
 
   return { rows, shared: [], unresolved };
 }

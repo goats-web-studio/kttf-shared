@@ -397,7 +397,9 @@ describe('группы плюс финальные группы', () => {
     expect(places(placement.rows)).toMatchObject({ c: null, d: null, e: null });
   });
 
-  it('оставшийся вне финальных групп остаётся без определённого места', () => {
+  it('не вышедший в финальные группы выбыл на групповом этапе', () => {
+    // Раньше у него стояло UNDECIDED — «место ещё не определено», хотя
+    // финальные группы уже собраны и играть ему больше нечего.
     const placement = calculatePlacement(
       'GROUPS_FINAL_GROUPS',
       input({
@@ -407,6 +409,15 @@ describe('группы плюс финальные группы', () => {
     );
 
     expect(places(placement.rows)).toEqual({ a: 1, b: 2, z: null });
-    expect(reasons(placement.rows).z).toBe('UNDECIDED');
+    expect(reasons(placement.rows).z).toBe('GROUP_EXIT');
+  });
+
+  it('пока финальных групп нет, места не определены ни у кого', () => {
+    const placement = calculatePlacement(
+      'GROUPS_FINAL_GROUPS',
+      input({ groups: [group(0, table(['a', 'b'], [win('a', 'b')]))] }),
+    );
+
+    expect(reasons(placement.rows)).toEqual({ a: 'UNDECIDED', b: 'UNDECIDED' });
   });
 });
