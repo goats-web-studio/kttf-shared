@@ -48,6 +48,21 @@ export const ERROR_CODES = {
    * Меняться местами такому не с кем — ТЗ 5.3.
    */
   DRAW_POSITION_NOT_FOUND: 'DRAW_POSITION_NOT_FOUND',
+  /**
+   * Стола с таким номером в зале нет: номер больше числа столов турнира.
+   * `details.tableCount` — сколько их (ADR-061).
+   */
+  TABLE_OUT_OF_RANGE: 'TABLE_OUT_OF_RANGE',
+  /**
+   * За столом идёт другая встреча. `details.matchId` — какая. При уменьшении
+   * числа столов — за одним из убираемых столов ещё играют (ADR-061).
+   */
+  TABLE_BUSY: 'TABLE_BUSY',
+  /**
+   * Длина встречи меняется только у тех, что ещё не начаты. `details.matchIds`
+   * — начатые встречи, чью длину правка поменяла бы (ADR-061).
+   */
+  MATCH_LENGTH_LOCKED: 'MATCH_LENGTH_LOCKED',
 
   // ---------- завершение турнира: ТС 7.5 ----------
 

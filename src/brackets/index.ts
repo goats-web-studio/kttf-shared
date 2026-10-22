@@ -38,8 +38,8 @@ export type {
 } from './groups.js';
 export { findClubCollisions, splitIntoGroups } from './groups.js';
 
-export type { PendingMatch } from './withdrawals.js';
-export { applyWithdrawals } from './withdrawals.js';
+export type { PendingMatch, WithdrawalCandidate } from './withdrawals.js';
+export { applyWithdrawals, bracketWalkover, isDecidedByWithdrawal } from './withdrawals.js';
 
 export type {
   BracketResult,
