@@ -85,3 +85,19 @@ describe('ручная корректировка жеребьёвки', () => {
     expect(drawSwapSchema.safeParse({ playerAId: ID }).success).toBe(false);
   });
 });
+
+describe('счёт по партиям во встрече', () => {
+  it('приходит списком пар и может отсутствовать', () => {
+    expect(matchViewSchema.safeParse(match).success).toBe(true);
+    expect(
+      matchViewSchema.safeParse({
+        ...match,
+        setScores: [
+          [11, 7],
+          [9, 11],
+        ],
+      }).success,
+    ).toBe(true);
+    expect(matchViewSchema.safeParse({ ...match, setScores: [[11]] }).success).toBe(false);
+  });
+});

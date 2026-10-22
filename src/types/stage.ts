@@ -43,6 +43,15 @@ export const matchViewSchema = z.object({
   setsA: z.number().int().nullable(),
   setsB: z.number().int().nullable(),
   resultType: resultTypeSchema.nullable(),
+  /**
+   * Счёт по партиям, если судья его вводил: `[[11, 7], [9, 11], …]`.
+   * Необязателен: ввод по партиям — опция (ТЗ 6.3), а снимки и ответы,
+   * собранные до поля, обязаны читаться.
+   */
+  setScores: z
+    .array(z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]))
+    .nullable()
+    .optional(),
   /** Тур круговой схемы либо круг сетки. */
   bracketRound: z.number().int().nullable(),
   bracketSlot: z.number().int().nullable(),
