@@ -60,3 +60,6 @@ export {
   playoffRoundsFor,
   playoffSetsToWin,
 } from './match-length.js';
+
+export type { LateGroupCandidate } from './late-entry.js';
+export { chooseLateGroup, scheduleLateEntry } from './late-entry.js';

@@ -200,8 +200,20 @@ export type ListTournamentsRequest = Omit<ListTournamentsQuery, 'status' | 'orde
 /** Запись на турнир. Без `playerId` — запись самого себя (ТЗ 4.3). */
 export const registerSchema = z.object({
   playerId: z.uuid().optional(),
+  /**
+   * Группа для опоздавшего, когда жеребьёвка уже прошла (ADR-062). Не
+   * задана — сервер ставит в самую малую и слабую (`chooseLateGroup`).
+   */
+  groupId: z.uuid().optional(),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+/**
+ * Замена участника — ADR-062: новый игрок занимает место в расстановке, все
+ * встречи заменённого переходят к нему. Только пока заменённый не сыграл.
+ */
+export const replaceRegistrationSchema = z.object({ playerId: z.uuid() });
+export type ReplaceRegistrationInput = z.infer<typeof replaceRegistrationSchema>;
 
 /**
  * Правка участника — ТС 7.5: статус, вне зачёта, посев.

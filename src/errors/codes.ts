@@ -63,6 +63,17 @@ export const ERROR_CODES = {
    * — начатые встречи, чью длину правка поменяла бы (ADR-061).
    */
   MATCH_LENGTH_LOCKED: 'MATCH_LENGTH_LOCKED',
+  /**
+   * Опоздавшего некуда поставить (ADR-062): следующий этап уже построен или
+   * идёт сетка. `details.reason` — `NEXT_STAGE_BUILT` или `KNOCKOUT`. В сетку
+   * игрок попадает только заменой.
+   */
+  LATE_ENTRY_CLOSED: 'LATE_ENTRY_CLOSED',
+  /**
+   * Заменить можно только того, кто ещё не сыграл ни одной встречи
+   * (ADR-062). `details.matchIds` — сыгранные.
+   */
+  REPLACEMENT_LOCKED: 'REPLACEMENT_LOCKED',
 
   // ---------- завершение турнира: ТС 7.5 ----------
 

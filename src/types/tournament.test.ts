@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createTournamentSchema,
+  registerSchema,
   registrationViewSchema,
   setRegistrationCoachSchema,
+  replaceRegistrationSchema,
   updateRegistrationSchema,
   updateTournamentSchema,
   listTournamentsSchema,
@@ -435,5 +437,17 @@ describe('отметка «Оплатил» — ADR-062', () => {
   it('правка записи принимает её отдельно от статуса', () => {
     expect(updateRegistrationSchema.safeParse({ paid: true }).success).toBe(true);
     expect(updateRegistrationSchema.safeParse({ paid: 'да' }).success).toBe(false);
+  });
+});
+
+describe('поздняя запись и замена — ADR-062', () => {
+  it('группа опоздавшего — необязательный идентификатор', () => {
+    expect(registerSchema.safeParse({ playerId: CLUB_ID, groupId: CLUB_ID }).success).toBe(true);
+    expect(registerSchema.safeParse({ groupId: 'А' }).success).toBe(false);
+  });
+
+  it('замена требует игрока', () => {
+    expect(replaceRegistrationSchema.safeParse({ playerId: CLUB_ID }).success).toBe(true);
+    expect(replaceRegistrationSchema.safeParse({}).success).toBe(false);
   });
 });
