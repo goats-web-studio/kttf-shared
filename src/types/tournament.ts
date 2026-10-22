@@ -216,6 +216,11 @@ export const updateRegistrationSchema = z
     status: z.enum(['CONFIRMED', 'WAITLIST', 'WITHDRAWN', 'NO_SHOW', 'REJECTED']).optional(),
     isRated: z.boolean().optional(),
     seed: z.number().int().positive().max(1024).nullable().optional(),
+    /**
+     * Отметка «Оплатил» — учёт взноса наличными в зале (ADR-062). Ставит и
+     * снимает организатор, каждое изменение пишется в журнал.
+     */
+    paid: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, { message: 'Нужно указать хотя бы одно поле' });
 export type UpdateRegistrationInput = z.infer<typeof updateRegistrationSchema>;
@@ -301,6 +306,12 @@ export const registrationViewSchema = z.object({
    * сделанный раньше, иначе не прошёл бы схему.
    */
   coach: registrationCoachSchema.nullable().default(null),
+  /**
+   * Оплатил ли взнос (ADR-062). `null` — смотрящему это не видно: состав
+   * турнира публичный, а кто сколько заплатил — дело организатора. По
+   * умолчанию `null`: снимки и ответы, собранные до поля, читаются.
+   */
+  paid: z.boolean().nullable().default(null),
 });
 export type RegistrationView = z.infer<typeof registrationViewSchema>;
 

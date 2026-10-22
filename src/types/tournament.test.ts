@@ -338,7 +338,11 @@ describe('участник в ответе', () => {
       },
     };
 
-    expect(registrationViewSchema.parse(registration)).toEqual({ ...registration, coach: null });
+    expect(registrationViewSchema.parse(registration)).toEqual({
+      ...registration,
+      coach: null,
+      paid: null,
+    });
     expect(registrationViewSchema.safeParse({ ...registration, ratingAtStart: 250 }).success).toBe(
       false,
     );
@@ -424,5 +428,12 @@ describe('правило равенства в таблицах — ADR-062', ()
         tieBreak: 'COIN',
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('отметка «Оплатил» — ADR-062', () => {
+  it('правка записи принимает её отдельно от статуса', () => {
+    expect(updateRegistrationSchema.safeParse({ paid: true }).success).toBe(true);
+    expect(updateRegistrationSchema.safeParse({ paid: 'да' }).success).toBe(false);
   });
 });
