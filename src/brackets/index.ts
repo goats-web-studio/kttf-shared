@@ -6,6 +6,7 @@ export type {
   Standings,
   StandingsOptions,
   StandingRow,
+  TieBreakRule,
   TieGroup,
 } from './types.js';
 

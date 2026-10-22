@@ -31,10 +31,17 @@ export const playoffSetsToWinSchema = z.object(
 );
 export type PlayoffSetsToWin = z.infer<typeof playoffSetsToWinSchema>;
 
+/**
+ * Правило равенства в таблицах — ADR-062. Не задано — разница сетов и мячей
+ * (ТЗ 6.6): так читаются турниры, созданные до появления поля.
+ */
+const tieBreak = z.enum(['SET_DIFF', 'SET_RATIO']).optional();
+
 const roundRobin = z.object({
   type: z.literal('ROUND_ROBIN'),
   rounds: z.union([z.literal(1), z.literal(2)]),
   setsToWin,
+  tieBreak,
 });
 
 /**
@@ -74,6 +81,7 @@ const groupSizing = {
    * круг — то, как они и разыгрывались.
    */
   groupRounds: z.union([z.literal(1), z.literal(2)]).default(1),
+  tieBreak,
 };
 
 function exactlyOneSizing(value: {

@@ -281,3 +281,40 @@ describe('calculateStandings — победа второй стороны', () =
     expect(rows.every((row) => row.place === null)).toBe(true);
   });
 });
+
+describe('calculateStandings — правило «отношение сетов среди равных» (ADR-062)', () => {
+  // Круг из троих: по разнице сетов между равными a и c делят +1, и выше c —
+  // по личной встрече. По отношению сетов a выше: 4/3 против 5/4.
+  const circle = [match('a', 'b', 3, 0), match('b', 'c', 3, 2), match('c', 'a', 3, 1)];
+  const order = (options: Parameters<typeof calculateStandings>[2]): ParticipantId[] =>
+    calculateStandings(['a', 'b', 'c'], circle, options).rows.map((row) => row.participant);
+
+  it('по умолчанию — разница сетов и мячей', () => {
+    expect(order({})).toEqual(['c', 'a', 'b']);
+    expect(order({ tieBreak: 'SET_DIFF' })).toEqual(['c', 'a', 'b']);
+  });
+
+  it('опцией турнира — отношение сетов среди равных', () => {
+    expect(order({ tieBreak: 'SET_RATIO' })).toEqual(['a', 'c', 'b']);
+  });
+
+  it('мячи и встречи с остальными при отношении сетов не учитываются', () => {
+    // a и b между собой не играли: мини-таблица пуста, отношение сетов
+    // равное. Разница мячей против z их развела бы, но это правило мячи и
+    // встречи с остальными не смотрит — решает судья.
+    const matches = [
+      scored('a', 'z', [
+        [11, 0],
+        [11, 0],
+      ]),
+      scored('b', 'z', [
+        [11, 9],
+        [11, 9],
+      ]),
+    ];
+    const standings = calculateStandings(['a', 'b', 'z'], matches, { tieBreak: 'SET_RATIO' });
+
+    expect(standings.unresolved).toEqual([{ participants: ['a', 'b'], places: [1, 2] }]);
+    expect(calculateStandings(['a', 'b', 'z'], matches).unresolved).toEqual([]);
+  });
+});

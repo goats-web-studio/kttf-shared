@@ -5,6 +5,7 @@ import type {
   Standings,
   StandingsOptions,
   StandingRow,
+  TieBreakRule,
   TieGroup,
 } from './types.js';
 
@@ -39,7 +40,10 @@ interface Tally {
  * заново с первого правила — так устроен регламент, и без рекурсии результат
  * получается неверным.
  *
- * Шестое правило — жребий — движок не бросает: решение принимает судья и
+ * Правило `SET_RATIO` (ADR-062) после личной встречи смотрит только на
+ * отношение сетов между равными, без мячей и без встреч с остальными.
+ *
+ * Последнее правило — жребий — движок не бросает: решение принимает судья и
  * передаёт его через `tieDecisions`. Неразрешённые группы возвращаются
  * в `unresolved`, и пока список не пуст, места определены не полностью.
  * ADR-008.
@@ -65,7 +69,7 @@ export function calculateStandings(
   const rows = participants.map((participant) => toRow(participant, tallies));
 
   const byId = new Map(rows.map((row) => [row.participant, row]));
-  const ordered = orderParticipants(participants, rows, matches);
+  const ordered = orderParticipants(participants, rows, matches, options.tieBreak ?? 'SET_DIFF');
   const { places, unresolved, displayOrder } = assignPlaces(ordered, options.tieDecisions ?? []);
 
   // Порядок показа берётся из уже вычисленных корзин, а не пересортировкой:
@@ -167,12 +171,13 @@ function orderParticipants(
   participants: readonly ParticipantId[],
   rows: readonly StandingRow[],
   matches: readonly PlayedMatch[],
+  rule: TieBreakRule,
 ): Bucket[] {
   const byId = new Map(rows.map((row) => [row.participant, row]));
   const pointsOf = (id: ParticipantId): number => mustGet(byId, id).points;
 
   const byPoints = groupSortedDesc([...participants], pointsOf);
-  return byPoints.flatMap((bucket) => separate(bucket, byId, matches));
+  return byPoints.flatMap((bucket) => separate(bucket, byId, matches, rule));
 }
 
 /**
@@ -183,6 +188,7 @@ function separate(
   members: Bucket,
   byId: ReadonlyMap<ParticipantId, StandingRow>,
   matches: readonly PlayedMatch[],
+  rule: TieBreakRule,
 ): Bucket[] {
   if (members.length <= 1) return [members];
 
@@ -190,18 +196,27 @@ function separate(
   const internal = matches.filter((match) => among.has(match.a) && among.has(match.b));
   const internalTallies = buildTallies(members, internal);
 
-  const criteria: ((id: ParticipantId) => number)[] = [
-    // 1. Личная встреча: очки в мини-таблице между равными
-    (id) => mustGet(internalTallies, id).points,
-    // 2. Разница сетов между равными
-    (id) => diff(mustGet(internalTallies, id), 'setsWon', 'setsLost'),
-    // 3. Разница мячей между равными
-    (id) => diff(mustGet(internalTallies, id), 'ballsWon', 'ballsLost'),
-    // 4. Общая разница сетов
-    (id) => mustGet(byId, id).setDiff,
-    // 5. Общая разница мячей
-    (id) => mustGet(byId, id).ballDiff,
-  ];
+  const criteria: ((id: ParticipantId) => number)[] =
+    rule === 'SET_RATIO'
+      ? [
+          // 1. Личная встреча: очки в мини-таблице между равными
+          (id) => mustGet(internalTallies, id).points,
+          // 2. Отношение сетов между равными — долей выигранных: порядок тот
+          //    же, что у «выиграно / проиграно», а делить на ноль не нужно
+          (id) => setShare(mustGet(internalTallies, id)),
+        ]
+      : [
+          // 1. Личная встреча: очки в мини-таблице между равными
+          (id) => mustGet(internalTallies, id).points,
+          // 2. Разница сетов между равными
+          (id) => diff(mustGet(internalTallies, id), 'setsWon', 'setsLost'),
+          // 3. Разница мячей между равными
+          (id) => diff(mustGet(internalTallies, id), 'ballsWon', 'ballsLost'),
+          // 4. Общая разница сетов
+          (id) => mustGet(byId, id).setDiff,
+          // 5. Общая разница мячей
+          (id) => mustGet(byId, id).ballDiff,
+        ];
 
   for (const criterion of criteria) {
     const buckets = groupSortedDesc(members, criterion);
@@ -209,12 +224,18 @@ function separate(
       // Разделилось частично — к оставшимся равным правила применяются
       // заново с первого. Внутри меньшей группы личная встреча считается
       // по-другому и часто разводит там, где не развела в большой.
-      return buckets.flatMap((bucket) => separate(bucket, byId, matches));
+      return buckets.flatMap((bucket) => separate(bucket, byId, matches, rule));
     }
   }
 
   // 6. Жребий движку недоступен: возвращаем группу как есть, решит судья.
   return [[...members].sort()];
+}
+
+/** Доля выигранных сетов. Без сыгранных сетов — ноль. */
+function setShare(tally: Tally): number {
+  const total = tally.setsWon + tally.setsLost;
+  return total === 0 ? 0 : tally.setsWon / total;
 }
 
 function diff(tally: Tally, won: keyof Tally, lost: keyof Tally): number {

@@ -400,3 +400,29 @@ describe('список турниров: порядок и поля календ
     expect(shape.matchesPlayed.safeParse(-1).success).toBe(false);
   });
 });
+
+describe('правило равенства в таблицах — ADR-062', () => {
+  it('задаётся у схем с таблицами и по умолчанию не задано', () => {
+    const plain = formatConfigSchema.parse({ type: 'ROUND_ROBIN', rounds: 1, setsToWin: 3 });
+    const ratio = formatConfigSchema.parse({
+      type: 'ROUND_ROBIN',
+      rounds: 1,
+      setsToWin: 3,
+      tieBreak: 'SET_RATIO',
+    });
+
+    expect('tieBreak' in plain ? plain.tieBreak : undefined).toBeUndefined();
+    expect('tieBreak' in ratio ? ratio.tieBreak : undefined).toBe('SET_RATIO');
+  });
+
+  it('чужое значение отвергается', () => {
+    expect(
+      formatConfigSchema.safeParse({
+        type: 'ROUND_ROBIN',
+        rounds: 1,
+        setsToWin: 3,
+        tieBreak: 'COIN',
+      }).success,
+    ).toBe(false);
+  });
+});
