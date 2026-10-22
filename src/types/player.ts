@@ -175,10 +175,35 @@ const profile = {
   coachName: name.optional(),
 };
 
-export const createPlayerSchema = z.object(profile).superRefine((value, ctx) => {
-  agreeOnBirth(value, ctx);
-  coachIsSingle(value, ctx);
-});
+/**
+ * Стартовый рейтинг, который задаёт организатор, заводя игрока, — ADR-062.
+ *
+ * Без него новичок входит с 250 и ломает посев: сильный любитель оказывается
+ * в одной корзине с начинающими. Шаг 25 и пределы — чтобы это было оценкой
+ * «на глаз», а не выдуманной точностью. Игрок остаётся провизорным
+ * (ТЗ 7): первые 20 встреч быстро поправят оценку.
+ */
+export const START_RATING_MIN = 100;
+export const START_RATING_MAX = 1000;
+export const START_RATING_STEP = 25;
+
+export const startRatingSchema = z
+  .number()
+  .int()
+  .min(START_RATING_MIN)
+  .max(START_RATING_MAX)
+  .multipleOf(START_RATING_STEP);
+
+/**
+ * Заведение профиля. `startRating` есть только у профиля, который
+ * организатор заводит другому человеку: свой профиль начинается с 250.
+ */
+export const createPlayerSchema = z
+  .object({ ...profile, startRating: startRatingSchema.optional() })
+  .superRefine((value, ctx) => {
+    agreeOnBirth(value, ctx);
+    coachIsSingle(value, ctx);
+  });
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
 
 /**
