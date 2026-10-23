@@ -168,7 +168,7 @@ export const ERROR_CODES = {
   FORUM_PROFILE_REQUIRED: 'FORUM_PROFILE_REQUIRED',
   /** Администратор запретил писать. `details.until`, `details.reason`. */
   FORUM_MUTED: 'FORUM_MUTED',
-  /** Тема закрыта: ответить, править и отмечать в ней нельзя. */
+  /** Тема закрыта: ответить и править в ней нельзя, «нравится» — можно. */
   FORUM_TOPIC_LOCKED: 'FORUM_TOPIC_LOCKED',
   /**
    * Лимит форума исчерпан. `details.kind` — `TOPICS`, `POSTS` или `REPORTS`,
