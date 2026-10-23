@@ -65,6 +65,47 @@ export const notificationViewSchema = z.discriminatedUnion('type', [
       targetName: z.string(),
     }),
   }),
+  /** Ваше сообщение процитировали — автору цитаты. */
+  z.object({
+    ...base,
+    type: z.literal('FORUM_REPLY'),
+    data: z.object({
+      topicId: z.uuid(),
+      topicTitle: z.string(),
+      postId: z.uuid(),
+      number: z.number().int().positive(),
+      authorName: z.string(),
+    }),
+  }),
+  /**
+   * Новые сообщения в теме, на которую подписан. Одно непрочитанное на тему:
+   * следующие увеличивают `count`, ссылка ведёт к первому непрочитанному.
+   */
+  z.object({
+    ...base,
+    type: z.literal('FORUM_TOPIC_UPDATE'),
+    data: z.object({
+      topicId: z.uuid(),
+      topicTitle: z.string(),
+      postId: z.uuid(),
+      number: z.number().int().positive(),
+      authorName: z.string(),
+      count: z.number().int().positive(),
+    }),
+  }),
+  /** Модератор скрыл ваше сообщение или тему — с причиной. */
+  z.object({
+    ...base,
+    type: z.literal('FORUM_POST_HIDDEN'),
+    data: z.object({
+      topicId: z.uuid(),
+      topicTitle: z.string(),
+      /** `null` — скрыта тема целиком. */
+      postId: z.uuid().nullable(),
+      number: z.number().int().positive().nullable(),
+      reason: z.string(),
+    }),
+  }),
 ]);
 export type NotificationView = z.infer<typeof notificationViewSchema>;
 export type NotificationType = NotificationView['type'];

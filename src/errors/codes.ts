@@ -161,6 +161,20 @@ export const ERROR_CODES = {
   TRIAL_REQUEST_LIMIT: 'TRIAL_REQUEST_LIMIT',
   /** Ответить или отозвать можно только новую заявку. `details.status` — текущий. */
   TRIAL_REQUEST_INVALID: 'TRIAL_REQUEST_INVALID',
+
+  // ---------- форум: ADR-064 ----------
+
+  /** Писать на форуме можно только с профилем игрока: автор — это профиль. */
+  FORUM_PROFILE_REQUIRED: 'FORUM_PROFILE_REQUIRED',
+  /** Администратор запретил писать. `details.until`, `details.reason`. */
+  FORUM_MUTED: 'FORUM_MUTED',
+  /** Тема закрыта: ответить, править и отмечать в ней нельзя. */
+  FORUM_TOPIC_LOCKED: 'FORUM_TOPIC_LOCKED',
+  /**
+   * Лимит форума исчерпан. `details.kind` — `TOPICS`, `POSTS` или `REPORTS`,
+   * `details.limit` — сколько можно.
+   */
+  FORUM_LIMIT: 'FORUM_LIMIT',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
