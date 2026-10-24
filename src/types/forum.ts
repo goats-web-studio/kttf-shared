@@ -68,6 +68,17 @@ export const forumSubjectSchema = z.object({
       logoUrl: z.string().nullable(),
     })
     .nullable(),
+  /**
+   * У новости — её картинка, вид и срок акции: статья темы показывает запись
+   * так же, как страница клуба или тренера. У остальных предметов — `null`.
+   */
+  news: z
+    .object({
+      kind: z.enum(['NEWS', 'PROMO']),
+      imageUrl: z.string().nullable(),
+      validUntil: z.iso.date().nullable(),
+    })
+    .nullable(),
 });
 export type ForumSubject = z.infer<typeof forumSubjectSchema>;
 
