@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import { applyDelta, calculateMatch } from './calculate-match.js';
-import { GAP_ZERO, K_BASE, MIN_RATING, PROVISIONAL_THRESHOLD, START_RATING } from './constants.js';
-import { gapMultiplier, isProvisional } from './factors.js';
+import {
+  GAP_ZERO,
+  MIN_RATING,
+  NOVICE_K_LOSS,
+  NOVICE_K_WIN,
+  NOVICE_TOURNAMENTS,
+  START_RATING,
+} from './constants.js';
+import { baseDelta, isNovice } from './factors.js';
 import { generateMatches } from './test-cases.js';
-import type { MatchInput } from './types.js';
+import type { MatchInput, PlayerSnapshot } from './types.js';
 
 /**
- * Инварианты движка рейтинга. 03-tech-spec.md, раздел 5.5.
+ * Инварианты движка рейтинга. 03-tech-spec.md, раздел 5.5; формула RTTF, ADR-069.
  *
  * Это не «тесты на всякий случай». Ошибка здесь — единственная, которую
  * пользователь не прощает: клуб уходит вместе с игроком, чей рейтинг посчитан
@@ -15,68 +22,126 @@ import type { MatchInput } from './types.js';
  */
 
 const CASES = generateMatches();
-const RATED = { rating: 400, ratedMatches: 50 } as const;
+const REGULAR: PlayerSnapshot = { rating: 400, ratedMatches: 50, ratedTournaments: 10 };
+const NOVICE: PlayerSnapshot = { rating: 400, ratedMatches: 3, ratedTournaments: 0 };
 
 function movesRating(input: MatchInput): boolean {
   const { winnerDelta, loserDelta } = calculateMatch(input);
   return winnerDelta !== 0 || loserDelta !== 0;
 }
 
+function hasNovice(input: MatchInput): boolean {
+  return isNovice(input.winner) || isNovice(input.loser);
+}
+
+function match(
+  winner: PlayerSnapshot,
+  loser: PlayerSnapshot,
+  overrides: Partial<MatchInput> = {},
+): MatchInput {
+  return {
+    winner,
+    loser,
+    winnerSets: 3,
+    loserSets: 1,
+    tournamentFactor: 0.3,
+    resultType: 'NORMAL',
+    ...overrides,
+  };
+}
+
+function rated(rating: number): PlayerSnapshot {
+  return { ...REGULAR, rating };
+}
+
 describe(`выборка (${String(CASES.length)} случаев)`, () => {
   it('содержит все интересные комбинации', () => {
     expect(CASES.some((c) => movesRating(c))).toBe(true);
     expect(CASES.some((c) => !movesRating(c))).toBe(true);
-    expect(CASES.some((c) => isProvisional(c.winner))).toBe(true);
-    expect(CASES.some((c) => !isProvisional(c.winner) && !isProvisional(c.loser))).toBe(true);
+    expect(CASES.some((c) => isNovice(c.winner))).toBe(true);
+    expect(CASES.some((c) => isNovice(c.loser) && !isNovice(c.winner))).toBe(true);
+    expect(CASES.some((c) => !hasNovice(c))).toBe(true);
     expect(CASES.some((c) => c.winner.rating - c.loser.rating >= GAP_ZERO)).toBe(true);
     expect(CASES.some((c) => c.winner.rating < c.loser.rating)).toBe(true);
   });
 });
 
-describe('инвариант 1 — замкнутость для рейтинговых', () => {
-  it('winnerDelta + loserDelta === 0, когда оба игрока рейтинговые', () => {
-    const rated = CASES.filter((c) => !isProvisional(c.winner) && !isProvisional(c.loser));
-    expect(rated.length).toBeGreaterThan(100);
+describe('первоисточник — примеры, которые обязаны совпасть с RTTF до сотых', () => {
+  it('фаворит 500 обыграл 450 со счётом 3:1 при k = 0.3: ±1.5', () => {
+    const result = calculateMatch(match(rated(500), rated(450)));
+    expect(result.winnerDelta).toBe(1.5);
+    expect(result.loserDelta).toBe(-1.5);
+  });
 
-    for (const [index, input] of rated.entries()) {
+  it('аутсайдер 450 обыграл 500 со счётом 3:2 при k = 0.3: ±3.6', () => {
+    const result = calculateMatch(match(rated(450), rated(500), { winnerSets: 3, loserSets: 2 }));
+    expect(result.winnerDelta).toBe(3.6);
+    expect(result.loserDelta).toBe(-3.6);
+  });
+
+  it('равные при k = 0.4 и счёте 3:0: 10 × 0.4 × 1.2 = 4.8', () => {
+    const result = calculateMatch(
+      match(rated(600), rated(600), { tournamentFactor: 0.4, winnerSets: 3, loserSets: 0 }),
+    );
+    expect(result.winnerDelta).toBe(4.8);
+  });
+
+  it('новичок побеждает: k = 1 и D = 1 при любом счёте, соперник — по общим правилам', () => {
+    const result = calculateMatch(match(NOVICE, rated(400), { winnerSets: 3, loserSets: 2 }));
+    expect(result.factors.kWinner).toBe(NOVICE_K_WIN);
+    expect(result.factors.dWinner).toBe(1);
+    expect(result.winnerDelta).toBe(10);
+    // Соперник новичка: 10 × 0.3 × 0.8
+    expect(result.factors.kLoser).toBe(0.3);
+    expect(result.loserDelta).toBe(-2.4);
+    expect(result.imbalance).toBe(7.6);
+  });
+
+  it('новичок проигрывает: k = 0.5, теряет больше, чем получает обычный соперник', () => {
+    const result = calculateMatch(match(rated(400), NOVICE));
+    expect(result.factors.kLoser).toBe(NOVICE_K_LOSS);
+    expect(result.loserDelta).toBe(-5);
+    expect(result.winnerDelta).toBe(3);
+    expect(result.imbalance).toBe(-2);
+  });
+
+  it(`новичок — первые ${String(NOVICE_TOURNAMENTS)} турниров, шестой уже по общим правилам`, () => {
+    expect(isNovice({ ...REGULAR, ratedTournaments: NOVICE_TOURNAMENTS - 1 })).toBe(true);
+    expect(isNovice({ ...REGULAR, ratedTournaments: NOVICE_TOURNAMENTS })).toBe(false);
+  });
+});
+
+describe('инвариант 1 — замкнутость, когда новичков во встрече нет', () => {
+  it('winnerDelta + loserDelta === 0', () => {
+    const regular = CASES.filter((c) => !hasNovice(c));
+    expect(regular.length).toBeGreaterThan(100);
+
+    for (const [index, input] of regular.entries()) {
       const { winnerDelta, loserDelta } = calculateMatch(input);
       expect(winnerDelta + loserDelta, `случай ${String(index)}: ${JSON.stringify(input)}`).toBe(0);
     }
   });
 
   it('imbalance при этом ровно ноль', () => {
-    for (const input of CASES.filter((c) => !isProvisional(c.winner) && !isProvisional(c.loser))) {
+    for (const input of CASES.filter((c) => !hasNovice(c))) {
       expect(calculateMatch(input).imbalance).toBe(0);
     }
   });
 });
 
-describe('инвариант 2 — провизорный вброс измерим', () => {
-  it('imbalance ненулевой ровно тогда, когда победитель провизорный и встреча двигает рейтинг', () => {
+describe('инвариант 2 — расхождение возникает только от новичка', () => {
+  it('ненулевой imbalance означает, что во встрече новичок', () => {
     for (const input of CASES) {
-      const result = calculateMatch(input);
-      const expectedNonZero = isProvisional(input.winner) && movesRating(input);
-      expect(result.imbalance !== 0, JSON.stringify(input)).toBe(expectedNonZero);
+      if (calculateMatch(input).imbalance !== 0) {
+        expect(hasNovice(input), JSON.stringify(input)).toBe(true);
+      }
     }
   });
 
-  it('провизорный проигравший расхождения не создаёт: K_PROV_LOSS совпадает с K_BASE', () => {
-    const result = calculateMatch({
-      winner: RATED,
-      loser: { rating: 400, ratedMatches: 0 },
-      winnerSets: 3,
-      loserSets: 0,
-      level: 'REGIONAL',
-      resultType: 'NORMAL',
-    });
-    expect(result.factors.kWinner).toBe(K_BASE);
-    expect(result.factors.kLoser).toBe(K_BASE);
-    expect(result.imbalance).toBe(0);
-  });
-
-  it('вброс всегда в пользу игрока, а не против него', () => {
+  it('imbalance — ровно сумма дельт', () => {
     for (const input of CASES) {
-      expect(calculateMatch(input).imbalance).toBeGreaterThanOrEqual(0);
+      const { winnerDelta, loserDelta, imbalance } = calculateMatch(input);
+      expect(imbalance).toBeCloseTo(winnerDelta + loserDelta, 10);
     }
   });
 });
@@ -119,9 +184,10 @@ describe('инвариант 4 — техническая победа и сня
 });
 
 describe('инвариант 5 — разрыв GAP_ZERO обнуляет изменение', () => {
-  it('при разрыве 100 и более в пользу победителя обе дельты нулевые', () => {
+  it('при разрыве 100 и более в пользу победителя обе дельты нулевые — и у новичков тоже', () => {
     const wide = CASES.filter((c) => c.winner.rating - c.loser.rating >= GAP_ZERO);
     expect(wide.length).toBeGreaterThan(100);
+    expect(wide.some(hasNovice)).toBe(true);
 
     for (const input of wide) {
       const { winnerDelta, loserDelta } = calculateMatch(input);
@@ -131,73 +197,48 @@ describe('инвариант 5 — разрыв GAP_ZERO обнуляет изм
   });
 
   it('ровно на границе уже ноль', () => {
-    expect(gapMultiplier(350, 250)).toBe(0);
+    expect(baseDelta(350, 250)).toBe(0);
   });
 
   it('на волос до границы — ещё не ноль', () => {
-    expect(gapMultiplier(349.99, 250)).toBeGreaterThan(0);
+    expect(baseDelta(349.99, 250)).toBeGreaterThan(0);
   });
 });
 
-describe('инвариант 6 — непрерывность множителя разрыва', () => {
-  it('скачка у границы нет: подход слева даёт околонулевые значения', () => {
+describe('инвариант 6 — непрерывность у границы', () => {
+  it('скачка нет: подход слева даёт околонулевые значения', () => {
     for (const gap of [99, 99.9, 99.99, 99.999]) {
-      const value = gapMultiplier(250 + gap, 250);
+      const value = baseDelta(250 + gap, 250);
       expect(value).toBeGreaterThan(0);
-      expect(value).toBeLessThan(0.011);
+      expect(value).toBeLessThanOrEqual(0.1);
     }
   });
 
-  it('множитель монотонно убывает с ростом разрыва', () => {
+  it('база монотонно убывает с ростом превосходства победителя', () => {
     let previous = Number.POSITIVE_INFINITY;
-    for (let gap = 0; gap <= 150; gap += 1) {
-      const value = gapMultiplier(250 + gap, 250);
+    for (let gap = -300; gap <= 150; gap += 1) {
+      const value = baseDelta(250 + gap, 250);
       expect(value).toBeLessThanOrEqual(previous);
       previous = value;
-    }
-  });
-
-  it('победа аутсайдера ограничением не затронута', () => {
-    for (let gap = 1; gap <= 300; gap += 1) {
-      expect(gapMultiplier(250, 250 + gap)).toBe(1);
     }
   });
 });
 
 describe('инвариант 7 — сенсация тем дороже, чем больше разрыв', () => {
-  it('выигрыш победителя монотонно растёт с ростом превосходства соперника', () => {
+  it('выигрыш победителя растёт линейно и сверху не ограничен', () => {
     let previous = 0;
-    for (let gap = 0; gap <= 400; gap += 10) {
-      const { winnerDelta } = calculateMatch({
-        winner: { rating: 300, ratedMatches: 50 },
-        loser: { rating: 300 + gap, ratedMatches: 50 },
-        winnerSets: 3,
-        loserSets: 0,
-        level: 'REGIONAL',
-        resultType: 'NORMAL',
-      });
+    for (let gap = 0; gap <= 800; gap += 10) {
+      const { winnerDelta } = calculateMatch(match(rated(300), rated(300 + gap)));
       expect(winnerDelta).toBeGreaterThanOrEqual(previous);
       previous = winnerDelta;
     }
+    // (100 + 800) / 10 × 0.3 × 1
+    expect(previous).toBe(27);
   });
 
   it('победа фаворита стоит меньше победы аутсайдера при том же разрыве', () => {
-    const common = {
-      winnerSets: 3,
-      loserSets: 0,
-      level: 'REGIONAL',
-      resultType: 'NORMAL',
-    } as const;
-    const favourite = calculateMatch({
-      winner: { rating: 350, ratedMatches: 50 },
-      loser: { rating: 300, ratedMatches: 50 },
-      ...common,
-    });
-    const underdog = calculateMatch({
-      winner: { rating: 300, ratedMatches: 50 },
-      loser: { rating: 350, ratedMatches: 50 },
-      ...common,
-    });
+    const favourite = calculateMatch(match(rated(350), rated(300)));
+    const underdog = calculateMatch(match(rated(300), rated(350)));
     expect(underdog.winnerDelta).toBeGreaterThan(favourite.winnerDelta);
   });
 });
@@ -230,7 +271,7 @@ describe('инвариант 8 — знаки дельт', () => {
 });
 
 describe('инвариант 9 — округление не создаёт и не уничтожает очки', () => {
-  it('в длинной серии между рейтинговыми сумма изменений ровно ноль', () => {
+  it('в длинной серии между обычными игроками сумма изменений ровно ноль', () => {
     let ratingA = START_RATING;
     let ratingB = START_RATING;
     const total = ratingA + ratingB;
@@ -238,18 +279,9 @@ describe('инвариант 9 — округление не создаёт и �
     for (const [index, input] of CASES.slice(0, 2000).entries()) {
       const aWins = index % 2 === 0;
       const result = calculateMatch({
-        winner: {
-          rating: aWins ? ratingA : ratingB,
-          ratedMatches: PROVISIONAL_THRESHOLD,
-        },
-        loser: {
-          rating: aWins ? ratingB : ratingA,
-          ratedMatches: PROVISIONAL_THRESHOLD,
-        },
-        winnerSets: input.winnerSets,
-        loserSets: input.loserSets,
-        level: input.level,
-        resultType: input.resultType,
+        ...input,
+        winner: rated(aWins ? ratingA : ratingB),
+        loser: rated(aWins ? ratingB : ratingA),
       });
 
       if (aWins) {
@@ -269,21 +301,15 @@ describe('инвариант 10 — пересчёт истории равен �
   it('сумма дельт из журнала даёт то же значение, что пошаговое применение', () => {
     const journal: number[] = [];
     let incremental = START_RATING;
-    const opponent = { rating: 380, ratedMatches: 50 } as const;
+    const opponent = rated(380);
 
     for (const [index, input] of CASES.slice(0, 500).entries()) {
-      const snapshot = {
-        rating: incremental,
-        ratedMatches: PROVISIONAL_THRESHOLD + index,
-      };
+      const snapshot = { rating: incremental, ratedMatches: index, ratedTournaments: index };
       const won = index % 3 !== 0;
       const result = calculateMatch({
+        ...input,
         winner: won ? snapshot : opponent,
         loser: won ? opponent : snapshot,
-        winnerSets: input.winnerSets,
-        loserSets: input.loserSets,
-        level: input.level,
-        resultType: input.resultType,
       });
 
       const delta = won ? result.winnerDelta : result.loserDelta;

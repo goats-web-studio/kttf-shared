@@ -1,47 +1,45 @@
-import { LEVEL_FACTOR, MIN_RATING } from './constants.js';
-import { expectedScore, gapMultiplier, kFactor, scoreMultiplier } from './factors.js';
+import { MIN_RATING } from './constants.js';
+import { baseDelta, playerFactors, scoreMultiplier } from './factors.js';
 import { negate, round2 } from './round.js';
 import type { AppliedDelta, MatchInput, MatchOutput } from './types.js';
 
 /**
- * Расчёт изменения рейтинга по одной встрече. Формула 2.0, ADR-003.
+ * Расчёт изменения рейтинга по одной встрече. Формула 3.0 — формула RTTF, ADR-069.
  *
- *   base = T × M × G × (1 − E_победителя)
- *   winnerDelta =  round2(K_победителя  × base)
- *   loserDelta  = −round2(K_проигравшего × base)
+ *   base        = max(0, (100 − (Rв − Rп)) / 10)
+ *   winnerDelta =  round2(base × k_победителя  × D_победителя)
+ *   loserDelta  = −round2(base × k_проигравшего × D_проигравшего)
  *
- * Базовая величина считается ОДИН раз, K применяется к ней отдельно для каждого
- * игрока. Когда оба игрока рейтинговые, K совпадает и дельты в точности
- * противоположны — замкнутость обеспечена конструкцией, а не отдельной проверкой.
+ * k и D у обычного игрока — коэффициент турнира и коэффициент счёта,
+ * у новичка свои (factors.ts, `playerFactors`). Когда новичков во встрече нет,
+ * множители совпадают и дельты в точности противоположны — замкнутость
+ * обеспечена конструкцией, а не отдельной проверкой.
  */
 export function calculateMatch(input: MatchInput): MatchOutput {
-  const { winner, loser, winnerSets, loserSets, level, resultType } = input;
+  const { winner, loser, winnerSets, loserSets, tournamentFactor, resultType } = input;
 
-  const expectedWinner = expectedScore(winner.rating, loser.rating);
-  const gap = gapMultiplier(winner.rating, loser.rating);
-  const levelFactor = LEVEL_FACTOR[level];
-  const kWinner = kFactor(winner, true);
-  const kLoser = kFactor(loser, false);
+  const base = baseDelta(winner.rating, loser.rating);
 
-  // Техническая победа и снятие рейтинг не двигают: M = 0 обнуляет всю базу.
-  const score = resultType === 'NORMAL' ? scoreMultiplier(winnerSets, loserSets) : 0;
+  // Техническая победа и снятие рейтинг не двигают: обнуляется вся база.
+  const played = resultType === 'NORMAL';
+  const score = scoreMultiplier(winnerSets, loserSets);
+  const won = playerFactors(winner, true, tournamentFactor, score);
+  const lost = playerFactors(loser, false, tournamentFactor, score);
 
-  const base = levelFactor * score * gap * (1 - expectedWinner);
-
-  const winnerDelta = round2(kWinner * base);
-  const loserDelta = negate(round2(kLoser * base));
+  const winnerDelta = played ? round2(base * won.k * won.d) : 0;
+  const loserDelta = played ? negate(round2(base * lost.k * lost.d)) : 0;
 
   return {
     winnerDelta,
     loserDelta,
     imbalance: round2(winnerDelta + loserDelta),
     factors: {
-      expectedWinner,
-      gapMultiplier: gap,
-      scoreMultiplier: score,
-      levelFactor,
-      kWinner,
-      kLoser,
+      base,
+      tournamentFactor,
+      kWinner: won.k,
+      kLoser: lost.k,
+      dWinner: won.d,
+      dLoser: lost.d,
     },
   };
 }

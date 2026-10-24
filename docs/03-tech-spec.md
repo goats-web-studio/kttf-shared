@@ -38,22 +38,22 @@ _Архитектура, стек, модель данных, контракты
 
 ### 2.2. Фронтенд
 
-| Компонент            | Выбор                         |
-| -------------------- | ----------------------------- |
-| Сборка               | Vite 8                        |
-| Библиотека           | React 19 + TypeScript strict  |
-| Роутинг              | TanStack Router               |
-| Серверное состояние  | TanStack Query                |
-| Клиентское состояние | Zustand                       |
-| Стили                | Tailwind CSS 4                |
-| Компоненты           | shadcn/ui, основание своё (ADR-039) |
-| Формы                | React Hook Form + Zod         |
-| Графики              | Собственный SVG (ADR-028)     |
-| Локальное хранилище  | Dexie (IndexedDB)             |
-| PWA                  | vite-plugin-pwa (Workbox)     |
-| Локализация          | Собственный словарь (ADR-016) |
+| Компонент            | Выбор                                                  |
+| -------------------- | ------------------------------------------------------ |
+| Сборка               | Vite 8                                                 |
+| Библиотека           | React 19 + TypeScript strict                           |
+| Роутинг              | TanStack Router                                        |
+| Серверное состояние  | TanStack Query                                         |
+| Клиентское состояние | Zustand                                                |
+| Стили                | Tailwind CSS 4                                         |
+| Компоненты           | shadcn/ui, основание своё (ADR-039)                    |
+| Формы                | React Hook Form + Zod                                  |
+| Графики              | Собственный SVG (ADR-028)                              |
+| Локальное хранилище  | Dexie (IndexedDB)                                      |
+| PWA                  | vite-plugin-pwa (Workbox)                              |
+| Локализация          | Собственный словарь (ADR-016)                          |
 | Дизайн-система       | Токены в `styles.css` (ADR-038, `07-design-system.md`) |
-| Гарнитуры            | Oswald и Inter, свои файлы через fontsource |
+| Гарнитуры            | Oswald и Inter, свои файлы через fontsource            |
 
 ### 2.3. Мобильное
 
@@ -517,7 +517,7 @@ model RatingEvent {
   @@index([tournamentId])
 }
 
-enum RatingEventType { MATCH INITIAL MANUAL_ADJUST RECALC }
+enum RatingEventType { MATCH BONUS INITIAL MANUAL_ADJUST RECALC }  // BONUS — бонус призёру, ADR-069
 
 // ============ Финансы ============
 
@@ -639,18 +639,19 @@ type SeedingConfig = {
 
 ## 5. Движок рейтинга
 
-Директория `src/rating` репозитория `kttf-shared`. Чистые функции, ноль зависимостей. Формула версии 2.0 — обоснование в `02-requirements.md`, раздел 7, и в `06-decisions.md`, ADR-003.
+Директория `src/rating` репозитория `kttf-shared`. Чистые функции, ноль зависимостей. Формула версии 3.0 — формула RTTF; обоснование в `02-requirements.md`, раздел 7, и в `06-decisions.md`, ADR-069. Уровни 1–10 — ADR-070.
 
 ### 5.1. Контракт
 
 ```typescript
-export type TournamentLevel = 'CLUB' | 'REGIONAL' | 'NATIONAL';
 export type ResultType = 'NORMAL' | 'WALKOVER' | 'RETIRED';
 
 /** Игрок на момент старта турнира. Рейтинги зафиксированы, см. 5.4. */
 export interface PlayerSnapshot {
   rating: number;
   ratedMatches: number;
+  /** Сыграно рейтинговых турниров. Меньше пяти — новичок. */
+  ratedTournaments: number;
 }
 
 export interface MatchInput {
@@ -658,115 +659,92 @@ export interface MatchInput {
   loser: PlayerSnapshot;
   winnerSets: number;
   loserSets: number;
-  level: TournamentLevel;
+  /** Коэффициент турнира k = tournamentFactor(средний рейтинг участников). */
+  tournamentFactor: number;
   resultType: ResultType;
 }
 
 export interface MatchOutput {
-  /** Прибавка победителю. Всегда >= 0. */
-  winnerDelta: number;
-  /** Убавка проигравшему, со знаком. Всегда <= 0. */
-  loserDelta: number;
-  /** Ненулевой, только если хотя бы один игрок провизорный. winnerDelta + loserDelta. */
+  winnerDelta: number; // >= 0
+  loserDelta: number; // <= 0
+  /** winnerDelta + loserDelta. Ненулевой только когда во встрече новичок. */
   imbalance: number;
-  /** Всё, из чего сложился результат. Пишется в RatingEvent для аудита. */
-  factors: {
-    expectedWinner: number;
-    gapMultiplier: number;
-    scoreMultiplier: number;
-    levelFactor: number;
-    kWinner: number;
-    kLoser: number;
-  };
+  factors: { base; tournamentFactor; kWinner; kLoser; dWinner; dLoser };
 }
 
 export function calculateMatch(input: MatchInput): MatchOutput;
+export function applyDelta(rating: number, delta: number): { rating; appliedDelta; clamped };
 
-/** Применение с отсечкой по MIN_RATING. Возвращает фактические значения. */
-export function applyDelta(
-  rating: number,
-  delta: number,
-): {
-  rating: number;
-  appliedDelta: number;
-  clamped: boolean;
-};
+/** Турнир целиком: встречи, затем бонусы призёрам. */
+export function calculateTournamentRating(input: {
+  players: ReadonlyMap<string, { atStart: PlayerSnapshot; current: PlayerSnapshot }>;
+  matches: readonly RatedMatch[];
+  placements: readonly { playerId: string; place: number }[];
+}): { events; players; averageRating; tournamentFactor; imbalance };
+
+/** Уровень 1–10. */
+export function ratingLevel(rating: number): RatingLevel;
 ```
+
+`players` обязан содержать **всех** участников в зачёте, а не только сыгравших: по ним считаются средний рейтинг (k), число участников и топ-12 для бонуса.
 
 ### 5.2. Константы
 
 ```typescript
-export const SCALE = 200;
 export const GAP_ZERO = 100;
+export const DELTA_DIVISOR = 10;
 export const MIN_RATING = 1;
 export const START_RATING = 250;
-export const PROVISIONAL_THRESHOLD = 20;
 
-export const K_BASE = 20;
-export const K_PROV_WIN = 40;
-export const K_PROV_LOSS = 20;
+export const NOVICE_TOURNAMENTS = 5;
+export const NOVICE_K_WIN = 1;
+export const NOVICE_K_LOSS = 0.5;
+export const NOVICE_SCORE_MULTIPLIER = 1;
 
-export const LEVEL_FACTOR: Record<TournamentLevel, number> = {
-  CLUB: 0.8,
-  REGIONAL: 1.0,
-  NATIONAL: 1.2,
-};
+// k по среднему рейтингу: < 250 → 0.2, < 350 → 0.25, < 450 → 0.3, < 550 → 0.35, иначе 0.4
+export const TOURNAMENT_FACTOR = [...];
+export const TOURNAMENT_FACTOR_TOP = 0.4;
 
 export const SCORE_MULTIPLIER = { ONE_SET: 0.8, TWO_SETS: 1.0, THREE_PLUS: 1.2 };
+
+export const BONUS_MIN_PARTICIPANTS = 16;
+export const BONUS_TOP_PLAYERS = 12;
+// < 100 → 2.5/1.5/1 %, < 150 → 2/1/0.5 %, ≤ 200 → 1/0.5/0 %
+export const BONUS_PERCENT = [...];
 ```
 
-Значения стартовые, подлежат калибровке на реальных протоколах до пилота (`02-requirements.md`, 7.5). Все они собраны в одном модуле: калибровка — правка одного файла плюс пересчёт истории из журнала событий.
+Значения — с первоисточника RTTF, калибровке не подлежат.
 
 ### 5.3. Реализация
 
-```typescript
-function expectedScore(ratingA: number, ratingB: number): number {
-  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / SCALE));
-}
+```
+base = max(0, (GAP_ZERO − (R_победителя − R_проигравшего)) / DELTA_DIVISOR)
 
-/** Затухание к нулю при разрыве GAP_ZERO в пользу победителя. */
-function gapMultiplier(winnerRating: number, loserRating: number): number {
-  const gap = Math.max(0, winnerRating - loserRating);
-  return Math.max(0, 1 - gap / GAP_ZERO);
-}
+k, D обычного игрока = коэффициент турнира, коэффициент счёта
+k, D новичка         = 1 при победе / 0.5 при поражении, D = 1
 
-function scoreMultiplier(winnerSets: number, loserSets: number): number {
-  const diff = winnerSets - loserSets;
-  if (diff <= 1) return SCORE_MULTIPLIER.ONE_SET;
-  if (diff === 2) return SCORE_MULTIPLIER.TWO_SETS;
-  return SCORE_MULTIPLIER.THREE_PLUS;
-}
-
-function kFactor(player: PlayerSnapshot, won: boolean): number {
-  if (player.ratedMatches >= PROVISIONAL_THRESHOLD) return K_BASE;
-  return won ? K_PROV_WIN : K_PROV_LOSS;
-}
+winnerDelta =  round2(base × k_победителя  × D_победителя)
+loserDelta  = −round2(base × k_проигравшего × D_проигравшего)
 ```
 
-Базовая величина встречи считается один раз, `K` применяется к ней отдельно для каждого игрока:
+**Когда новичков во встрече нет, множители совпадают, и дельты в точности противоположны.** Замкнутость не требует отдельного кода и не ломается округлением.
 
-```
-base = T × M × G × (1 − E_победителя)
+При `resultType !== 'NORMAL'` обе дельты равны нулю. При разрыве 100 и более в пользу победителя `base = 0` — тоже, в том числе у новичков.
 
-winnerDelta = round2( K_победителя × base )
-loserDelta  = −round2( K_проигравшего × base )
-```
+**Бонус призёрам** считается после всех встреч от рейтинга на старте: `round2(rating × percent / 100)`, где `percent` уже поделён между делящими место. Бонус меньше сотой не пишется. Событие журнала `BONUS` без встречи; `place` и процент — в `reason`.
 
-**Когда оба игрока рейтинговые, `K` совпадает, и дельты в точности противоположны.** Замкнутость не требует отдельного кода и не может сломаться округлением: величина округляется до умножения на знак.
-
-Расхождение возникает **только** если хотя бы один игрок провизорный. Оно возвращается явным полем `imbalance` — не прячется, а измеряется.
-
-При `resultType !== 'NORMAL'` (техническая победа, снятие) `M = 0`, обе дельты равны нулю. При `G = 0` (разрыв 100 и более в пользу победителя) — тоже.
+**Счётчики.** `ratedMatches` растёт на каждую рейтинговую встречу, `ratedTournaments` — на единицу, если в турнире сыграна хотя бы одна. Бонус счётчиков не двигает. `isProvisional` в проекции игрока означает «новичок».
 
 ### 5.4. Фиксация рейтингов на старте турнира
 
 Все встречи турнира считаются против рейтингов, зафиксированных при переходе турнира в статус `RUNNING`.
 
-**Изменение модели данных.** Требуется поле в `Registration`:
+**Модель данных.** Поля `Registration`:
 
 ```prisma
-ratingAtStart Decimal? @db.Decimal(8,2)   // снимок на момент старта турнира
-matchesAtStart Int?                        // ratedMatches на тот же момент
+ratingAtStart      Decimal? @db.Decimal(8,2)   // снимок на момент старта турнира
+matchesAtStart     Int?                        // ratedMatches на тот же момент
+tournamentsAtStart Int?                        // ratedTournaments на тот же момент, ADR-069
 ```
 
 Без этих полей корректность недостижима: движок обязан получить снимок, а не текущее значение игрока, иначе результат зависит от порядка обработки встреч и локальный расчёт консоли разойдётся с серверным.
@@ -779,26 +757,25 @@ matchesAtStart Int?                        // ratedMatches на тот же мо
 
 ### 5.5. Обязательные инварианты (тесты)
 
-1. **Замкнутость для рейтинговых.** Если `ratedMatches >= 20` у обоих, то `winnerDelta + loserDelta === 0` при любых входных данных.
+1. **Замкнутость без новичков.** Если оба игрока сыграли не меньше пяти турниров, `winnerDelta + loserDelta === 0` при любых входных данных.
 2. **Знаки.** `winnerDelta >= 0` и `loserDelta <= 0` всегда.
 3. **Разрыв.** При `winnerRating - loserRating >= GAP_ZERO` обе дельты равны нулю.
 4. **Техническая победа.** При `resultType !== 'NORMAL'` обе дельты равны нулю.
-5. **Непрерывность.** `gapMultiplier` непрерывен: при разрыве 99.99 дельта близка к нулю, скачка у отметки 100 нет.
-6. **Симметрия сенсации.** Победа снизу вверх даёт тем больше, чем больше разрыв, и монотонно.
+5. **Непрерывность.** База непрерывна: при разрыве 99.99 близка к нулю, скачка у отметки 100 нет.
+6. **Сенсация.** Победа снизу вверх даёт тем больше, чем больше разрыв, монотонно и без потолка.
 7. **Отсечка.** Рейтинг никогда не опускается ниже `MIN_RATING`; при срабатывании `clamped === true` и `appliedDelta` отличается от запрошенной.
 8. **Идемпотентность пересчёта.** Пересчёт всей истории `RatingEvent` даёт то же значение, что инкрементальный расчёт.
-9. **Округление не создаёт очков.** Для рейтинговых пар сумма дельт по произвольной длинной серии встреч в точности равна нулю.
-10. **Провизорный вброс измерим.** `imbalance` ненулевой тогда и только тогда, когда провизорен **победитель** и встреча двигает рейтинг. Провизорность проигравшего роли не играет: `K_PROV_LOSS` намеренно равен `K_BASE`, и `K` обеих сторон совпадает.
+9. **Округление не создаёт очков.** Для пар обычных игроков сумма дельт по произвольной длинной серии встреч в точности равна нулю.
+10. **Вброс только от новичков и бонусов.** Ненулевой `imbalance` встречи означает, что в ней новичок.
+11. **Совпадение с первоисточником.** Примеры из правил RTTF (500 над 450 при k = 0.3 и 3:1 → ±1.5; 450 над 500 при 3:2 → ±3.6) дают те же числа до сотых.
 
 ### 5.6. Метрика инфляции
 
-Провизорный период — единственный канал, по которому в систему попадает рейтинг. Он обязан быть под наблюдением:
+Каналов, по которым в систему попадает рейтинг, два: новички и бонусы призёрам. Отсечка по минимуму — третий, механический. Они обязаны быть под наблюдением:
 
-- Сумма всех `imbalance` за период — совокупный вброс
+- Сумма всех `imbalance` за период — совокупный вброс (новичок может дать и отрицательный: проигравший новичок теряет больше, чем получает соперник)
 - Сумма рейтингов системы, разложенная на замкнутую часть и накопленный вброс
-- Алерт при отклонении вброса от прогноза (прогноз выводится из числа новых игроков)
-
-Без этой метрики утверждение «наш рейтинг не инфлирует» ничем не подкреплено, а это ровно тот аргумент, на котором конкурент отвергает формулу ФНТР.
+- Алерт при отклонении вброса от прогноза (прогноз выводится из числа новых игроков и турниров с бонусами)
 
 ## 6. Офлайн-режим консоли
 

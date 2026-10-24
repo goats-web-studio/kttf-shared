@@ -1,18 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
-import { K_BASE, K_PROV_WIN, MIN_RATING, PROVISIONAL_THRESHOLD } from './constants.js';
+import { MIN_RATING, NOVICE_K_WIN, NOVICE_TOURNAMENTS } from './constants.js';
 import { calculateTournamentRating } from './tournament.js';
-import type { PlayerSnapshot, RatedMatch, RatedPlayer, TournamentRatingInput } from './types.js';
+import type {
+  PlayerSnapshot,
+  RatedMatch,
+  RatedPlacement,
+  RatedPlayer,
+  TournamentRatingInput,
+} from './types.js';
 
 /**
- * Начисление рейтинга по итогам турнира — ТЗ 7.3.
+ * Начисление рейтинга по итогам турнира — ТЗ 7.3, формула RTTF (ADR-069).
  *
  * Инварианты движка (ТС 5.5) проверены на одной встрече в invariants.test.ts.
  * Здесь проверяется то, что появляется только на уровне турнира: цепочка
- * событий, независимость итога от порядка ввода счёта и правила отбора встреч.
+ * событий, независимость итога от порядка ввода счёта, правила отбора встреч,
+ * коэффициент турнира из среднего рейтинга и бонусы призёрам.
  */
 
-const RATED: PlayerSnapshot = { rating: 400, ratedMatches: 30 };
+const RATED: PlayerSnapshot = { rating: 400, ratedMatches: 30, ratedTournaments: 10 };
+
+function snap(rating: number, ratedMatches = 30, ratedTournaments = 10): PlayerSnapshot {
+  return { rating, ratedMatches, ratedTournaments };
+}
 
 function player(atStart: PlayerSnapshot, current: PlayerSnapshot = atStart): RatedPlayer {
   return { atStart, current };
@@ -32,7 +43,7 @@ function match(overrides: Partial<RatedMatch> = {}): RatedMatch {
 
 function input(overrides: Partial<TournamentRatingInput> = {}): TournamentRatingInput {
   return {
-    level: 'REGIONAL',
+    placements: [],
     players: new Map([
       ['a', player(RATED)],
       ['b', player(RATED)],
@@ -61,24 +72,27 @@ describe('одна встреча', () => {
     expect(loser?.ratingAfter).toBe(400 + (loser?.delta ?? 0));
   });
 
-  it('множители записываются для аудита, ожидание — своё у каждого', () => {
+  it('множители записываются для аудита', () => {
     const [winner, loser] = calculateTournamentRating(input()).events;
 
-    expect(winner?.tFactor).toBe(1);
+    // Средний 400 → k = 0.3; счёт 3:1 → D = 1; база при равных — 10.
+    expect(winner?.tFactor).toBe(0.3);
+    expect(winner?.kFactor).toBe(0.3);
     expect(winner?.mFactor).toBe(1);
-    expect(winner?.kFactor).toBe(K_BASE);
-    expect(loser?.kFactor).toBe(K_BASE);
-    expect(winner?.gapMultiplier).toBe(1);
-    // Соперники равны, поэтому обе половины по 0.5 и вместе дают единицу.
-    expect((winner?.expected ?? 0) + (loser?.expected ?? 0)).toBeCloseTo(1, 12);
+    expect(loser?.kFactor).toBe(0.3);
+    expect(winner?.delta).toBe(3);
+    expect(loser?.delta).toBe(-3);
+    expect(winner?.type).toBe('MATCH');
+    expect(winner?.place).toBeNull();
+    expect(winner?.bonusPercent).toBeNull();
   });
 
   it('рейтинг соперника берётся из снимка на старте, а не из текущего', () => {
     const result = calculateTournamentRating(
       input({
         players: new Map([
-          ['a', player(RATED, { rating: 999, ratedMatches: 30 })],
-          ['b', player({ rating: 300, ratedMatches: 30 }, { rating: 111, ratedMatches: 30 })],
+          ['a', player(RATED, snap(999))],
+          ['b', player(snap(300), snap(111))],
         ]),
       }),
     );
@@ -87,7 +101,7 @@ describe('одна встреча', () => {
     expect(result.events[1]?.opponentRating).toBe(400);
   });
 
-  it('итог по игроку возвращается вместе со счётчиком и провизорностью', () => {
+  it('итог по игроку возвращается вместе со счётчиками и признаком новичка', () => {
     const result = calculateTournamentRating(input());
 
     expect(result.players).toEqual([
@@ -95,15 +109,24 @@ describe('одна встреча', () => {
         playerId: 'a',
         rating: result.events[0]?.ratingAfter,
         ratedMatches: 31,
+        ratedTournaments: 11,
         isProvisional: false,
       },
       {
         playerId: 'b',
         rating: result.events[1]?.ratingAfter,
         ratedMatches: 31,
+        ratedTournaments: 11,
         isProvisional: false,
       },
     ]);
+  });
+
+  it('средний рейтинг и k возвращаются вместе с итогом', () => {
+    const result = calculateTournamentRating(input());
+
+    expect(result.averageRating).toBe(400);
+    expect(result.tournamentFactor).toBe(0.3);
   });
 });
 
@@ -120,20 +143,20 @@ describe('отбор встреч', () => {
     }
   });
 
-  it('нулевая дельта из-за разрыва 100 очков событие даёт, а счётчик двигает', () => {
+  it('нулевая дельта из-за разрыва 100 очков событие даёт, а счётчики двигает', () => {
     const result = calculateTournamentRating(
       input({
         players: new Map([
-          ['a', player({ rating: 500, ratedMatches: 30 })],
-          ['b', player({ rating: 300, ratedMatches: 30 })],
+          ['a', player(snap(500))],
+          ['b', player(snap(300))],
         ]),
       }),
     );
 
     expect(result.events).toHaveLength(2);
     expect(result.events.map((event) => event.delta)).toEqual([0, 0]);
-    expect(result.events.map((event) => event.gapMultiplier)).toEqual([0, 0]);
     expect(result.players.map((entry) => entry.ratedMatches)).toEqual([31, 31]);
+    expect(result.players.map((entry) => entry.ratedTournaments)).toEqual([11, 11]);
   });
 
   it('игрок без снимка на старте останавливает расчёт', () => {
@@ -151,7 +174,9 @@ describe('отбор встреч', () => {
   it('турнир без единой рейтинговой встречи не трогает никого', () => {
     const result = calculateTournamentRating(input({ matches: [] }));
 
-    expect(result).toEqual({ events: [], players: [], imbalance: 0 });
+    expect(result.events).toEqual([]);
+    expect(result.players).toEqual([]);
+    expect(result.imbalance).toBe(0);
   });
 });
 
@@ -163,9 +188,9 @@ describe('несколько встреч', () => {
   ];
 
   const threePlayers = new Map([
-    ['a', player({ rating: 400, ratedMatches: 30 })],
-    ['b', player({ rating: 380, ratedMatches: 25 })],
-    ['c', player({ rating: 420, ratedMatches: 40 })],
+    ['a', player(snap(400, 30))],
+    ['b', player(snap(380, 25))],
+    ['c', player(snap(420, 40))],
   ]);
 
   it('второе событие игрока продолжает первое, а не начинает заново', () => {
@@ -205,15 +230,41 @@ describe('несколько встреч', () => {
     expect(reversed.imbalance).toBe(straight.imbalance);
   });
 
-  it('счётчик рейтинговых встреч растёт на число сыгранных', () => {
+  it('счётчик встреч растёт на число сыгранных, турниров — на один', () => {
     const result = calculateTournamentRating(input({ matches: three, players: threePlayers }));
 
     expect(result.players.map((entry) => entry.ratedMatches)).toEqual([32, 27, 42]);
+    expect(result.players.map((entry) => entry.ratedTournaments)).toEqual([11, 11, 11]);
   });
 });
 
-describe('замкнутость и вброс — ТС 5.5, ТС 5.6', () => {
-  it('пара рейтинговых игроков не создаёт очков', () => {
+describe('коэффициент турнира — из среднего рейтинга всех участников', () => {
+  it('в средний входят и те, кто не сыграл ни одной рейтинговой встречи', () => {
+    const result = calculateTournamentRating(
+      input({
+        players: new Map([
+          ['a', player(snap(400))],
+          ['b', player(snap(400))],
+          ['c', player(snap(100))],
+        ]),
+      }),
+    );
+
+    expect(result.averageRating).toBe(300);
+    expect(result.tournamentFactor).toBe(0.25);
+    expect(result.events[0]?.delta).toBe(2.5);
+  });
+
+  it('пустой состав даёт средний ноль и нижний k', () => {
+    const result = calculateTournamentRating(input({ players: new Map(), matches: [] }));
+
+    expect(result.averageRating).toBe(0);
+    expect(result.tournamentFactor).toBe(0.2);
+  });
+});
+
+describe('новички и вброс — ТС 5.5, ТС 5.6', () => {
+  it('пара обычных игроков не создаёт очков', () => {
     const result = calculateTournamentRating(input());
     const sum = result.events.reduce((total, event) => total + event.delta, 0);
 
@@ -222,11 +273,11 @@ describe('замкнутость и вброс — ТС 5.5, ТС 5.6', () => {
     expect(result.events[0]?.imbalance).toBe(0);
   });
 
-  it('провизорный победитель даёт вброс, и он записан только победителю', () => {
+  it('новичок-победитель даёт вброс, и он записан только победителю', () => {
     const result = calculateTournamentRating(
       input({
         players: new Map([
-          ['a', player({ rating: 250, ratedMatches: 0 })],
+          ['a', player(snap(400, 0, 0))],
           ['b', player(RATED)],
         ]),
       }),
@@ -234,16 +285,17 @@ describe('замкнутость и вброс — ТС 5.5, ТС 5.6', () => {
 
     const [winner, loser] = result.events;
 
-    expect(winner?.kFactor).toBe(K_PROV_WIN);
-    expect(loser?.kFactor).toBe(K_BASE);
-    expect(result.imbalance).toBeGreaterThan(0);
+    expect(winner?.kFactor).toBe(NOVICE_K_WIN);
+    expect(winner?.mFactor).toBe(1);
+    expect(loser?.kFactor).toBe(0.3);
+    expect(result.imbalance).toBe(7);
     expect(winner?.imbalance).toBe(result.imbalance);
     expect(loser?.imbalance).toBeNull();
   });
 
   it('вброс за турнир — сумма вбросов по встречам', () => {
     const players = new Map([
-      ['a', player({ rating: 250, ratedMatches: 0 })],
+      ['a', player(snap(400, 0, 0))],
       ['b', player(RATED)],
       ['c', player(RATED)],
     ]);
@@ -252,7 +304,7 @@ describe('замкнутость и вброс — ТС 5.5, ТС 5.6', () => {
         players,
         matches: [
           match({ matchId: 'm1', winnerId: 'a', loserId: 'b' }),
-          match({ matchId: 'm2', winnerId: 'a', loserId: 'c' }),
+          match({ matchId: 'm2', winnerId: 'c', loserId: 'a' }),
         ],
       }),
     );
@@ -264,33 +316,151 @@ describe('замкнутость и вброс — ТС 5.5, ТС 5.6', () => {
     expect(result.imbalance).toBeCloseTo(perMatch, 10);
   });
 
-  it('провизорный проигравший вброса не создаёт — K_PROV_LOSS равен K_BASE', () => {
+  it('пятый турнир закрывает период новичка, а k берётся из снимка', () => {
     const result = calculateTournamentRating(
       input({
         players: new Map([
-          ['a', player(RATED)],
-          ['b', player({ rating: 250, ratedMatches: 0 })],
-        ]),
-      }),
-    );
-
-    expect(result.imbalance).toBe(0);
-  });
-
-  it('двадцатая встреча закрывает провизорный период', () => {
-    const result = calculateTournamentRating(
-      input({
-        players: new Map([
-          ['a', player({ rating: 250, ratedMatches: PROVISIONAL_THRESHOLD - 1 })],
+          ['a', player(snap(400, 12, NOVICE_TOURNAMENTS - 1))],
           ['b', player(RATED)],
         ]),
       }),
     );
 
-    expect(result.players[0]?.ratedMatches).toBe(PROVISIONAL_THRESHOLD);
+    expect(result.players[0]?.ratedTournaments).toBe(NOVICE_TOURNAMENTS);
     expect(result.players[0]?.isProvisional).toBe(false);
-    // K берётся из снимка: на момент турнира игрок ещё был провизорным.
-    expect(result.events[0]?.kFactor).toBe(K_PROV_WIN);
+    expect(result.events[0]?.kFactor).toBe(NOVICE_K_WIN);
+  });
+
+  it('новичок остаётся новичком, пока не сыграл пять турниров', () => {
+    const result = calculateTournamentRating(
+      input({
+        players: new Map([
+          ['a', player(snap(400, 0, 0))],
+          ['b', player(RATED)],
+        ]),
+      }),
+    );
+
+    expect(result.players[0]?.ratedTournaments).toBe(1);
+    expect(result.players[0]?.isProvisional).toBe(true);
+  });
+});
+
+describe('бонус призёрам — первоисточник, п. 5', () => {
+  /** Призёры p1–p3 и ещё `extra` участников по 400. */
+  function field(
+    ratings: { p1?: number; p2?: number; p3?: number } = {},
+    extra = 13,
+  ): Map<string, RatedPlayer> {
+    const players = new Map<string, RatedPlayer>([
+      ['p1', player(snap(ratings.p1 ?? 400))],
+      ['p2', player(snap(ratings.p2 ?? 400))],
+      ['p3', player(snap(ratings.p3 ?? 400))],
+    ]);
+    for (let index = 0; index < extra; index += 1) {
+      players.set('x' + String(index), player(snap(400)));
+    }
+    return players;
+  }
+
+  const podium: readonly RatedPlacement[] = [
+    { playerId: 'p1', place: 1 },
+    { playerId: 'p2', place: 2 },
+    { playerId: 'p3', place: 3 },
+  ];
+
+  function bonuses(players: Map<string, RatedPlayer>, placements = podium) {
+    return calculateTournamentRating({ players, matches: [], placements }).events;
+  }
+
+  it('16 участников, призёры вровень с сильнейшими: 2.5 / 1.5 / 1 %', () => {
+    const events = bonuses(field());
+
+    expect(events.map((event) => [event.playerId, event.delta])).toEqual([
+      ['p1', 10],
+      ['p2', 6],
+      ['p3', 4],
+    ]);
+    expect(events.every((event) => event.type === 'BONUS' && event.matchId === null)).toBe(true);
+    expect(events.map((event) => event.place)).toEqual([1, 2, 3]);
+    expect(events.map((event) => event.bonusPercent)).toEqual([2.5, 1.5, 1]);
+  });
+
+  it('пятнадцать участников — бонуса нет', () => {
+    expect(bonuses(field({}, 12))).toEqual([]);
+  });
+
+  it('призёр сильнее топ-12 больше чем на 200 — бонуса нет, остальным есть', () => {
+    // Топ-12: один 700 и одиннадцать по 400 → 425. 700 − 425 = 275.
+    const events = bonuses(field({ p1: 700 }));
+
+    expect(events.map((event) => event.playerId)).toEqual(['p2', 'p3']);
+  });
+
+  it('превосходство 150–200 — нижняя строка таблицы, третьему ноль', () => {
+    // Топ-12: три по 600 и девять по 400 → 450. 600 − 450 = 150.
+    const events = bonuses(field({ p1: 600, p2: 600, p3: 600 }));
+
+    expect(events.map((event) => [event.playerId, event.bonusPercent, event.delta])).toEqual([
+      ['p1', 1, 6],
+      ['p2', 0.5, 3],
+    ]);
+  });
+
+  it('делённое место делит бонус: два третьих — по половине каждому', () => {
+    const events = bonuses(field(), [...podium, { playerId: 'x0', place: 3 }]);
+
+    const third = events.filter((event) => event.place === 3);
+    expect(third.map((event) => [event.playerId, event.bonusPercent, event.delta])).toEqual([
+      ['p3', 0.5, 2],
+      ['x0', 0.5, 2],
+    ]);
+  });
+
+  it('призёр вне зачёта бонуса не получает, делящий с ним место — только свою долю', () => {
+    const events = bonuses(field(), [...podium, { playerId: 'outsider', place: 3 }]);
+
+    expect(events.filter((event) => event.place === 3).map((event) => event.delta)).toEqual([2]);
+  });
+
+  it('бонус меньше сотой не пишется вовсе', () => {
+    // Третье место на двоих: 1 % / 2 = 0.5 %. От 0.5 это 0.0025 → 0.
+    const players = field({ p3: 0.5 });
+    players.set('x0', player(snap(0.5)));
+    const events = bonuses(players, [...podium, { playerId: 'x0', place: 3 }]);
+
+    expect(events.filter((event) => event.place === 3)).toEqual([]);
+  });
+
+  it('бонус идёт после встреч и продолжает цепочку, вброс учитывает его', () => {
+    const result = calculateTournamentRating({
+      players: field(),
+      matches: [match({ winnerId: 'p1', loserId: 'p2' })],
+      placements: podium,
+    });
+
+    const ofP1 = result.events.filter((event) => event.playerId === 'p1');
+    expect(ofP1.map((event) => event.type)).toEqual(['MATCH', 'BONUS']);
+    expect(ofP1[1]?.ratingBefore).toBe(ofP1[0]?.ratingAfter);
+    // Бонус — от рейтинга на старте, а не от набежавшего: 400 × 2.5 %.
+    expect(ofP1[1]?.delta).toBe(10);
+    // Встреча замкнута, вброс — только бонусы: 10 + 6 + 4.
+    expect(result.imbalance).toBe(20);
+    expect(result.players.find((entry) => entry.playerId === 'p1')?.rating).toBe(413);
+  });
+
+  it('призёр без сыгранных встреч получает бонус, но турнир ему не засчитан', () => {
+    const result = calculateTournamentRating({ players: field(), matches: [], placements: podium });
+
+    expect(result.players.find((entry) => entry.playerId === 'p1')).toMatchObject({
+      rating: 410,
+      ratedTournaments: 10,
+      ratedMatches: 30,
+    });
+  });
+
+  it('места ниже третьего бонуса не дают', () => {
+    expect(bonuses(field(), [{ playerId: 'p1', place: 4 }])).toEqual([]);
   });
 });
 
@@ -299,8 +469,8 @@ describe('отсечка по MIN_RATING', () => {
     const result = calculateTournamentRating(
       input({
         players: new Map([
-          ['a', player({ rating: 400, ratedMatches: 30 })],
-          ['b', player({ rating: 380, ratedMatches: 30 }, { rating: 1.5, ratedMatches: 30 })],
+          ['a', player(snap(400))],
+          ['b', player(snap(380), snap(1.5))],
         ]),
       }),
     );

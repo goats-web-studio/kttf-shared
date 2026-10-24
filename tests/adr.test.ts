@@ -201,6 +201,8 @@ describe('документация — источник истины', () => {
       'ADR-009',
       'ADR-015',
       'ADR-016',
+      'ADR-069',
+      'ADR-070',
     ]) {
       expect(decisions, `${adr} отсутствует в журнале`).toContain(adr);
     }
@@ -215,14 +217,17 @@ describe('документация — источник истины', () => {
   it('константы формулы в коде совпадают с задокументированными', () => {
     const constants = readText('src', 'rating', 'constants.ts');
     const documented: readonly [string, string][] = [
-      ['SCALE', '200'],
       ['GAP_ZERO', '100'],
+      ['DELTA_DIVISOR', '10'],
       ['MIN_RATING', '1'],
       ['START_RATING', '250'],
-      ['PROVISIONAL_THRESHOLD', '20'],
-      ['K_BASE', '20'],
-      ['K_PROV_WIN', '40'],
-      ['K_PROV_LOSS', '20'],
+      ['NOVICE_TOURNAMENTS', '5'],
+      ['NOVICE_K_WIN', '1'],
+      ['NOVICE_K_LOSS', '0.5'],
+      ['NOVICE_SCORE_MULTIPLIER', '1'],
+      ['TOURNAMENT_FACTOR_TOP', '0.4'],
+      ['BONUS_MIN_PARTICIPANTS', '16'],
+      ['BONUS_TOP_PLAYERS', '12'],
     ];
 
     for (const [name, value] of documented) {

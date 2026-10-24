@@ -6,6 +6,7 @@ export type {
   PlayerRatingOutcome,
   PlayerSnapshot,
   RatedMatch,
+  RatedPlacement,
   RatedPlayer,
   RatingEventDraft,
   ResultType,
@@ -15,25 +16,39 @@ export type {
 } from './types.js';
 
 export {
+  BONUS_MIN_PARTICIPANTS,
+  BONUS_PERCENT,
+  BONUS_TOP_PLAYERS,
+  DELTA_DIVISOR,
   GAP_ZERO,
-  K_BASE,
-  K_PROV_LOSS,
-  K_PROV_WIN,
-  LEVEL_FACTOR,
   MIN_RATING,
-  PROVISIONAL_THRESHOLD,
-  SCALE,
+  NOVICE_K_LOSS,
+  NOVICE_K_WIN,
+  NOVICE_SCORE_MULTIPLIER,
+  NOVICE_TOURNAMENTS,
   SCORE_MULTIPLIER,
   START_RATING,
+  TOURNAMENT_FACTOR,
+  TOURNAMENT_FACTOR_TOP,
 } from './constants.js';
 
 export {
-  expectedScore,
-  gapMultiplier,
-  isProvisional,
-  kFactor,
+  averageOf,
+  baseDelta,
+  bonusPercent,
+  isNovice,
+  playerFactors,
+  type PrizePlace,
   scoreMultiplier,
+  tournamentFactor,
 } from './factors.js';
 export { negate, round2 } from './round.js';
 export { applyDelta, calculateMatch } from './calculate-match.js';
-export { calculateTournamentRating } from './tournament.js';
+export { calculateTournamentRating, prizeBonuses } from './tournament.js';
+export {
+  RATING_LEVEL_FLOORS,
+  RATING_LEVELS,
+  type RatingLevel,
+  ratingLevel,
+  ratingLevelRange,
+} from './level.js';
