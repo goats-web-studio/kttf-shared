@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  coachVisibilitySchema,
   createPlayerSchema,
   listPlayersSchema,
   playerListItemSchema,
@@ -210,6 +211,7 @@ describe('игрок в ответе', () => {
       coachSlug: null,
       coachSince: null,
       coachHistory: [],
+      coachVisibility: 'ALL',
       ownCoachSlug: null,
       birthYearOnly: true,
       lastSeenAt: null,
@@ -238,6 +240,18 @@ describe('приватность даты рождения', () => {
   it('в кратком виде даты нет вовсе, прятать нечего', () => {
     expect(playerViewSchema.shape).not.toHaveProperty('birthDate');
     expect(playerViewSchema.shape).not.toHaveProperty('birthYearOnly');
+  });
+});
+
+describe('кому виден тренер — ADR-066', () => {
+  it('три значения; правка может прислать одно его, без анкеты', () => {
+    expect(coachVisibilitySchema.options).toEqual(['ALL', 'CURRENT', 'NONE']);
+    expect(updatePlayerSchema.safeParse({ coachVisibility: 'NONE' }).success).toBe(true);
+    expect(updatePlayerSchema.safeParse({ coachVisibility: null }).success).toBe(false);
+  });
+
+  it('в кратком виде настройки нет: тренера там нет вовсе', () => {
+    expect(playerViewSchema.shape).not.toHaveProperty('coachVisibility');
   });
 });
 

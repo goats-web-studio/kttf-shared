@@ -43,6 +43,17 @@ export const gripSchema = z.enum(['SHAKEHAND', 'PENHOLD']);
 export type Grip = z.infer<typeof gripSchema>;
 
 /**
+ * Кому из посторонних виден тренер — ADR-066.
+ *
+ * `ALL` — текущий и прежние, `CURRENT` — только текущий, `NONE` — никакой:
+ * ни на профиле, ни по имени среди учеников на странице тренера. Сам игрок
+ * и организатор его клуба видят всё — тот же круг, что у даты рождения
+ * (ADR-037): они правят анкету, и спрятанное от них стёрлось бы правкой.
+ */
+export const coachVisibilitySchema = z.enum(['ALL', 'CURRENT', 'NONE']);
+export type CoachVisibility = z.infer<typeof coachVisibilitySchema>;
+
+/**
  * Инвентарь — свободная строка, а не справочник.
  *
  * У конкурента это выпадающий список моделей. Свой справочник инвентаря —
@@ -173,6 +184,8 @@ const profile = {
   coachPlayerId: z.uuid().optional(),
   /** Тренер, которого в списке нет. */
   coachName: name.optional(),
+  /** Кому показывать тренера — ADR-066. Умолчание базы — `ALL`. */
+  coachVisibility: coachVisibilitySchema.optional(),
 };
 
 /**
@@ -412,6 +425,11 @@ export const playerProfileViewSchema = playerViewSchema.extend({
   coachSince: z.iso.datetime().nullable(),
   /** Прежние тренеры из истории, последние первыми. */
   coachHistory: z.array(coachTenureViewSchema),
+  /**
+   * Кому из посторонних виден тренер — ADR-066. Постороннему скрытое
+   * приходит пустым, как незаполненное: `null` и `[]`.
+   */
+  coachVisibility: coachVisibilitySchema,
   /**
    * Своя опубликованная страница тренера — бейдж «Тренер KTTF» в шапке
    * профиля (ADR-059). Не путать с `coachSlug` — это страница его тренера.
