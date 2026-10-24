@@ -175,6 +175,31 @@ export const ERROR_CODES = {
    * `details.limit` — сколько можно.
    */
   FORUM_LIMIT: 'FORUM_LIMIT',
+
+  // ---------- дуэли и спарринги: ADR-065 ----------
+
+  /** Предлагать и откликаться можно только с профилем игрока. */
+  DUEL_PROFILE_REQUIRED: 'DUEL_PROFILE_REQUIRED',
+  /** Вызвать можно только игрока с аккаунтом и не себя. `details.reason` — `NO_ACCOUNT` или `SELF`. */
+  DUEL_OPPONENT_INVALID: 'DUEL_OPPONENT_INVALID',
+  /**
+   * Предел исчерпан. `details.kind` — `OPEN` (открытых публикаций),
+   * `CHALLENGES` или `RESPONSES` (за сутки), `details.limit` — сколько можно.
+   */
+  DUEL_LIMIT: 'DUEL_LIMIT',
+  /**
+   * Рейтинговую встречу на это время назначить нельзя (`duelRatingBlock`).
+   * `details.kind` — `PAIR` или `PLAYER`, `details.playerId` — чей предел.
+   */
+  DUEL_RATING_LIMIT: 'DUEL_RATING_LIMIT',
+  /** Действие не к этому состоянию. `details.status` — текущее. */
+  DUEL_INVALID_STATE: 'DUEL_INVALID_STATE',
+  /** У игрока уже есть открытый отклик на это предложение. */
+  DUEL_RESPONSE_EXISTS: 'DUEL_RESPONSE_EXISTS',
+  /** Время вне правил: в прошлом, дальше 60 дней, счёт раньше начала игры. */
+  DUEL_TIME_INVALID: 'DUEL_TIME_INVALID',
+  /** Счёт не по формату матча: `details.setsToWin`. */
+  DUEL_SCORE_INVALID: 'DUEL_SCORE_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

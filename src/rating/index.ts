@@ -52,3 +52,12 @@ export {
   ratingLevel,
   ratingLevelRange,
 } from './level.js';
+export {
+  DUEL_CONFIRM_HOURS,
+  DUEL_PAIR_WINDOW_DAYS,
+  DUEL_PLAYER_WEEK_MAX,
+  DUEL_WEIGHT,
+  calculateDuelRating,
+  duelRatingBlock,
+} from './duel.js';
+export type { DuelRatingInput, DuelRatingResult, RatedDuelRecord } from './duel.js';

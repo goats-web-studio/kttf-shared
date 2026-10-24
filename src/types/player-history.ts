@@ -22,12 +22,19 @@ import { resultTypeSchema } from './stage.js';
  * сотня точек одного турнира в ней ничего не объясняет. Разбор по встречам
  * даёт история встреч.
  *
- * `tournamentId` пуст у ручной корректировки (ТЗ 12): она не привязана к
+ * `tournamentId` пуст у дуэли (тогда есть `duel`) и у ручной корректировки (ТЗ 12): она не привязана к
  * турниру, но из кривой её выкидывать нельзя — рейтинг после неё другой.
  */
 export const ratingPointSchema = z.object({
   tournamentId: z.uuid().nullable(),
   tournamentName: z.string().nullable(),
+  /**
+   * Дуэль вне турнира (ADR-065): точка на каждую дуэль, с именем соперника.
+   * `null` у турнира и ручной корректировки.
+   */
+  duel: z
+    .object({ id: z.uuid(), opponentName: z.string(), kind: z.enum(['DUEL', 'SPARRING']) })
+    .nullable(),
   /** Старт турнира, а для корректировки — момент записи. */
   playedAt: z.iso.datetime(),
   ratingBefore: z.string(),

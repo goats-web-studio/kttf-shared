@@ -34,6 +34,7 @@ const player = {
 const point = {
   tournamentId: TOURNAMENT_ID,
   tournamentName: 'Кубок клуба',
+  duel: null,
   playedAt: '2026-09-02T10:00:00.000Z',
   ratingBefore: '250.00',
   ratingAfter: '265.25',

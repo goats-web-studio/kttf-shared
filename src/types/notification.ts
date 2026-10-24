@@ -25,6 +25,14 @@ const trialInbox = z.object({
   name: z.string(),
 });
 
+/** Дуэль в уведомлении — снимок: вид и кто сделал то, о чём уведомление (ADR-065). */
+const duelRef = {
+  duelId: z.uuid(),
+  kind: z.enum(['DUEL', 'SPARRING']),
+  /** Другой игрок: вызвавший, откликнувшийся, отменивший, внёсший счёт. */
+  playerName: z.string(),
+};
+
 const base = {
   id: z.uuid(),
   readAt: z.iso.datetime().nullable(),
@@ -122,6 +130,66 @@ export const notificationViewSchema = z.discriminatedUnion('type', [
       postId: z.uuid().nullable(),
       number: z.number().int().positive().nullable(),
     }),
+  }),
+  /** Вас вызвали на дуэль или спарринг — вызванному. */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_CHALLENGE'),
+    data: z.object({ ...duelRef, rated: z.boolean() }),
+  }),
+  /** Отклик на публикацию или своё время в ответ на вызов — автору. */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_RESPONSE'),
+    data: z.object({ ...duelRef, responseId: z.uuid() }),
+  }),
+  /** Соперник и время согласованы — второму участнику. */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_SCHEDULED'),
+    data: z.object({ ...duelRef, startsAt: z.iso.datetime() }),
+  }),
+  /**
+   * Не сложилось: вызванный отказался (`DECLINED`) или автор выбрал другого
+   * (`TAKEN`) — тому, кому отказали.
+   */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_DECLINED'),
+    data: z.object({ ...duelRef, reason: z.enum(['DECLINED', 'TAKEN']) }),
+  }),
+  /** Участник отменил назначенную игру — второму. */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_CANCELLED'),
+    data: z.object({ ...duelRef, reason: z.string().nullable() }),
+  }),
+  /** Внесён счёт — второму: подтвердить или оспорить до `confirmBy`. */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_RESULT'),
+    data: z.object({
+      ...duelRef,
+      /** «3:1» с точки зрения получателя: его партии первыми. */
+      setsFor: z.number().int().nonnegative(),
+      setsAgainst: z.number().int().nonnegative(),
+      confirmBy: z.iso.datetime(),
+    }),
+  }),
+  /**
+   * Счёт подтверждён или спор решён — обоим, кроме подтвердившего. `delta`
+   * — изменение рейтинга получателя строкой; `null` — без рейтинга.
+   */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_COMPLETED'),
+    data: z.object({ ...duelRef, delta: z.string().nullable() }),
+  }),
+  /** Счёт оспорен — внёсшему: решает администратор. */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_DISPUTED'),
+    data: z.object({ ...duelRef }),
   }),
 ]);
 export type NotificationView = z.infer<typeof notificationViewSchema>;
