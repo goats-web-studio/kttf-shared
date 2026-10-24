@@ -345,15 +345,6 @@ export const duelResultSchema = z.object({
 });
 export type DuelResult = z.infer<typeof duelResultSchema>;
 
-/** Изменение рейтинга участника по дуэли. */
-export const duelRatingChangeSchema = z.object({
-  playerId: z.uuid(),
-  ratingBefore: z.string(),
-  delta: z.string(),
-  ratingAfter: z.string(),
-});
-export type DuelRatingChange = z.infer<typeof duelRatingChangeSchema>;
-
 /** Отклик: виден автору целиком, откликнувшемуся — свой. */
 export const duelResponseViewSchema = z.object({
   id: z.uuid(),
@@ -367,6 +358,15 @@ export const duelResponseViewSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export type DuelResponseView = z.infer<typeof duelResponseViewSchema>;
+
+/** Изменение рейтинга участника по дуэли. */
+export const duelRatingChangeSchema = z.object({
+  playerId: z.uuid(),
+  ratingBefore: z.string(),
+  delta: z.string(),
+  ratingAfter: z.string(),
+});
+export type DuelRatingChange = z.infer<typeof duelRatingChangeSchema>;
 
 /** Строка доски и списков. */
 export const duelItemSchema = z.object({
@@ -388,6 +388,8 @@ export const duelItemSchema = z.object({
   /** Новых откликов — видно только автору; остальным `null`. */
   responsesNew: z.number().int().nonnegative().nullable(),
   result: duelResultSchema.nullable(),
+  /** Изменения рейтинга участников; пусто, пока не обсчитана. Вкладка «Сыгранные» показывает их. */
+  ratingChanges: z.array(duelRatingChangeSchema),
   createdAt: z.iso.datetime(),
 });
 export type DuelItemView = z.infer<typeof duelItemSchema>;
@@ -399,7 +401,6 @@ export type DuelItemView = z.infer<typeof duelItemSchema>;
  */
 export const duelViewSchema = duelItemSchema.extend({
   responses: z.array(duelResponseViewSchema),
-  ratingChanges: z.array(duelRatingChangeSchema),
   /** Начисление отменено администратором. */
   annulledAt: z.iso.datetime().nullable(),
   annulReason: z.string().nullable(),
@@ -420,7 +421,6 @@ export type DuelView = z.infer<typeof duelViewSchema>;
 /** Строка очереди администратора. */
 export const adminDuelItemSchema = duelItemSchema.extend({
   flags: z.array(duelFlagSchema),
-  ratingChanges: z.array(duelRatingChangeSchema),
   annulledAt: z.iso.datetime().nullable(),
   /** Рейтинговых дуэлей этой пары за 30 дней, эта тоже. */
   pairCount30d: z.number().int().nonnegative(),

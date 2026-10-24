@@ -150,13 +150,13 @@ export const notificationViewSchema = z.discriminatedUnion('type', [
     data: z.object({ ...duelRef, startsAt: z.iso.datetime() }),
   }),
   /**
-   * Не сложилось: вызванный отказался (`DECLINED`) или автор выбрал другого
-   * (`TAKEN`) — тому, кому отказали.
+   * Не сложилось — тому, кому отказали: вызванный отказался (`DECLINED`,
+   * автору), автор отклонил отклик (`REJECTED`) или выбрал другого (`TAKEN`).
    */
   z.object({
     ...base,
     type: z.literal('DUEL_DECLINED'),
-    data: z.object({ ...duelRef, reason: z.enum(['DECLINED', 'TAKEN']) }),
+    data: z.object({ ...duelRef, reason: z.enum(['DECLINED', 'REJECTED', 'TAKEN']) }),
   }),
   /** Участник отменил назначенную игру — второму. */
   z.object({
