@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { CLUB_IMAGE_PATH_PATTERN } from './media.js';
+import { forumDiscussionLinkSchema } from './forum.js';
 import { pageQuerySchema } from './pagination.js';
 
 /**
@@ -72,6 +73,8 @@ export const clubPostViewSchema = z.object({
   /** Скрыта администратором: публично не видна, клуб видит причину в кабинете. */
   hidden: z.boolean(),
   hiddenReason: z.string().nullable(),
+  /** Тема форума этой записи — «Обсудить (N)» (ADR-067); `null` у скрытой. */
+  discussion: forumDiscussionLinkSchema.nullable(),
 });
 export type ClubPostView = z.infer<typeof clubPostViewSchema>;
 

@@ -7,7 +7,10 @@ import {
   FORUM_POST_IMAGES_MAX,
   FORUM_QUOTE_MAX,
   forumPostPage,
+  forumWarningInputSchema,
   hideForumPostSchema,
+  listForumFeedSchema,
+  listForumPostsSchema,
   listForumTopicsSchema,
   moderateForumTopicSchema,
   updateForumSectionSchema,
@@ -44,11 +47,22 @@ describe('forum — сообщения', () => {
     ).toBe(false);
   });
 
-  it('страница сообщения по номеру', () => {
+  it('страница ответа по номеру: первое сообщение — статья над ответами', () => {
     expect(forumPostPage(1)).toBe(1);
-    expect(forumPostPage(20)).toBe(1);
-    expect(forumPostPage(21)).toBe(2);
-    expect(forumPostPage(41, 10)).toBe(5);
+    expect(forumPostPage(2)).toBe(1);
+    expect(forumPostPage(21)).toBe(1);
+    expect(forumPostPage(22)).toBe(2);
+    expect(forumPostPage(42, 10)).toBe(5);
+  });
+
+  it('ответы — по порядку, если порядок не задан', () => {
+    expect(listForumPostsSchema.parse({}).sort).toBe('OLD');
+    expect(listForumPostsSchema.parse({ replies: 'true' }).replies).toBe(true);
+  });
+
+  it('лента — новые сверху, поиск от двух знаков', () => {
+    expect(listForumFeedSchema.parse({}).sort).toBe('NEW');
+    expect(listForumFeedSchema.safeParse({ q: 'а' }).success).toBe(false);
   });
 });
 
@@ -77,6 +91,12 @@ describe('forum — модерация', () => {
   it('жалоба «другое» — с комментарием', () => {
     expect(createForumReportSchema.safeParse({ reason: 'OTHER' }).success).toBe(false);
     expect(createForumReportSchema.safeParse({ reason: 'SPAM' }).success).toBe(true);
+  });
+
+  it('предупреждение «другое» — с комментарием', () => {
+    const userId = id;
+    expect(forumWarningInputSchema.safeParse({ userId, rule: 'OTHER' }).success).toBe(false);
+    expect(forumWarningInputSchema.safeParse({ userId, rule: 'FLOOD' }).success).toBe(true);
   });
 
   it('раздел — правка хотя бы одного поля', () => {

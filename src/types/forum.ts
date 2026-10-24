@@ -27,22 +27,47 @@ export const FORUM_POSTS_PER_HOUR = 30;
 /** Жалоб от человека за сутки. */
 export const FORUM_REPORTS_PER_DAY = 20;
 
+/** Кто говорит за обсуждаемую сторону — метка у сообщения (ADR-067). */
+export const FORUM_POST_ROLES = ['ORGANIZER', 'CLUB', 'COACH'] as const;
+export type ForumPostRole = (typeof FORUM_POST_ROLES)[number];
+
 // ---------------------------------------------------------------- предмет темы
 
 /**
  * Тема с предметом (F2): турнир, клуб, тренер, товар. Одна тема на предмет;
- * она же — обсуждение или отзывы на странице предмета.
+ * она же — обсуждение или отзывы на странице предмета. Новость или акция
+ * клуба и тренера (`CLUB_POST`, `COACH_POST`) — тоже тема: публикуется на
+ * форуме сама, и под ней обсуждают (ADR-067).
  */
-export const FORUM_SUBJECT_TYPES = ['TOURNAMENT', 'CLUB', 'COACH', 'PRODUCT'] as const;
+export const FORUM_SUBJECT_TYPES = [
+  'TOURNAMENT',
+  'CLUB',
+  'COACH',
+  'PRODUCT',
+  'CLUB_POST',
+  'COACH_POST',
+] as const;
 export const forumSubjectTypeSchema = z.enum(FORUM_SUBJECT_TYPES);
 export type ForumSubjectType = z.infer<typeof forumSubjectTypeSchema>;
 
-/** Предмет темы для ссылки: у тренера и товара адрес по `slug`, у остальных — по `id`. */
+/**
+ * Предмет темы для ссылки: у тренера и товара адрес по `slug`, у остальных —
+ * по `id`. У новости — чья она: клуб или тренер (`owner`), ведёт на их страницу.
+ */
 export const forumSubjectSchema = z.object({
   type: forumSubjectTypeSchema,
   id: z.uuid(),
   name: z.string(),
   slug: z.string().nullable(),
+  owner: z
+    .object({
+      kind: z.enum(['CLUB', 'COACH']),
+      id: z.uuid(),
+      slug: z.string().nullable(),
+      name: z.string(),
+      logoUrl: z.string().nullable(),
+    })
+    .nullable(),
 });
 export type ForumSubject = z.infer<typeof forumSubjectSchema>;
 
@@ -55,8 +80,13 @@ export const forumSectionInputSchema = z.object({
   title: z.string().trim().min(1).max(80),
   description: z.string().trim().max(300).nullable().optional(),
   position: z.number().int().min(0).max(1000).optional(),
-  /** Куда попадают темы с предметом этого типа. Один раздел на тип. */
-  subjectType: forumSubjectTypeSchema.nullable().optional(),
+  /** Куда попадают темы с предметом этих типов. Один раздел на тип. */
+  subjectTypes: z.array(forumSubjectTypeSchema).max(FORUM_SUBJECT_TYPES.length).optional(),
+  /**
+   * Можно ли завести тему руками. В «Новостях клубов и тренеров» — нет:
+   * тема там — сама новость (ADR-067).
+   */
+  manualTopics: z.boolean().optional(),
 });
 export type ForumSectionInput = z.infer<typeof forumSectionInputSchema>;
 
@@ -80,7 +110,8 @@ export const forumSectionViewSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   position: z.number().int(),
-  subjectType: forumSubjectTypeSchema.nullable(),
+  subjectTypes: z.array(forumSubjectTypeSchema),
+  manualTopics: z.boolean(),
   /** В архиве — не принимает новых тем; видна только администратору. */
   archived: z.boolean(),
   topicsCount: z.number().int().nonnegative(),
@@ -104,6 +135,10 @@ export const forumAuthorSchema = z.object({
   club: z.object({ id: z.uuid(), name: z.string() }).nullable(),
   /** Администратор KTTF — метка «Модератор». */
   moderator: z.boolean(),
+  /** Опубликованная страница тренера — метка «Тренер» ссылкой (ADR-067). */
+  coachSlug: z.string().nullable(),
+  /** Был на сайте последние `ONLINE_WINDOW_MS` — точка «в сети». */
+  online: z.boolean(),
 });
 export type ForumAuthor = z.infer<typeof forumAuthorSchema>;
 
@@ -125,20 +160,17 @@ export const forumTopicItemSchema = z.object({
   /** Скрыта модератором: в списках её нет, по ссылке — автору и администратору. */
   hidden: z.boolean(),
   hiddenReason: z.string().nullable(),
+  /** Просмотры — как у RTTF, приблизительно: повтор того же человека за полчаса не считается. */
+  viewsCount: z.number().int().nonnegative(),
+  /**
+   * Новых сообщений с прошлого захода этого человека; `null` — не вошёл или
+   * тему ещё не открывал (тогда она не «новая», а просто непрочитанная).
+   */
+  unread: z.number().int().nonnegative().nullable(),
+  /** Номер первого непрочитанного — ссылка «к новым». */
+  firstUnread: z.number().int().positive().nullable(),
 });
 export type ForumTopicItem = z.infer<typeof forumTopicItemSchema>;
-
-/** Тема целиком: то же и что может вошедший. */
-export const forumTopicViewSchema = forumTopicItemSchema.extend({
-  subscribed: z.boolean(),
-  /**
-   * Может ли этот человек ответить. Почему нет — видно из `locked` и
-   * `GET /forum/me`: не вошёл, нет профиля, запрет.
-   */
-  canReply: z.boolean(),
-  canRename: z.boolean(),
-});
-export type ForumTopicView = z.infer<typeof forumTopicViewSchema>;
 
 export const FORUM_TOPIC_SORTS = ['ACTIVE', 'NEW'] as const;
 
@@ -150,6 +182,8 @@ export const listForumTopicsSchema = pageQuerySchema.extend({
   section: z.string().regex(FORUM_SECTION_SLUG_PATTERN).optional(),
   q: z.string().trim().min(2).max(100).optional(),
   authorPlayerId: z.uuid().optional(),
+  /** Только темы предметов этого типа: «Обсуждение турниров» на главной форума. */
+  subjectType: forumSubjectTypeSchema.optional(),
   sort: z.enum(FORUM_TOPIC_SORTS).default('ACTIVE'),
 });
 export type ListForumTopicsQuery = z.infer<typeof listForumTopicsSchema>;
@@ -232,32 +266,78 @@ export const forumPostViewSchema = z.object({
   likes: z.number().int().nonnegative(),
   liked: z.boolean(),
   mine: z.boolean(),
+  /**
+   * Автор говорит за ту сторону, которую обсуждают (ADR-067): организатор
+   * турнира (состав клуба-хозяина), клуб в его отзывах и новостях, тренер в
+   * своих. `null` — обычный участник.
+   */
+  role: z.enum(FORUM_POST_ROLES).nullable(),
 });
 export type ForumPostView = z.infer<typeof forumPostViewSchema>;
 
-/** `GET /forum/topics/:id/posts` — по порядку номеров. */
+/** Тема целиком: то же, первое сообщение отдельно и что может вошедший. */
+export const forumTopicViewSchema = forumTopicItemSchema.extend({
+  /**
+   * Первое сообщение — «статья» над ответами, как у RTTF (ADR-067). Ответы —
+   * `GET …/posts?replies=true` со своей сортировкой.
+   */
+  firstPost: forumPostViewSchema.nullable(),
+  subscribed: z.boolean(),
+  /**
+   * Может ли этот человек ответить. Почему нет — видно из `locked` и
+   * `GET /forum/me`: не вошёл, нет профиля, запрет.
+   */
+  canReply: z.boolean(),
+  canRename: z.boolean(),
+});
+export type ForumTopicView = z.infer<typeof forumTopicViewSchema>;
+
+/** Порядок ответов в теме: по порядку, новые сверху, лучшие — по «нравится». */
+export const FORUM_POST_SORTS = ['OLD', 'NEW', 'TOP'] as const;
+export const forumPostSortSchema = z.enum(FORUM_POST_SORTS);
+export type ForumPostSort = z.infer<typeof forumPostSortSchema>;
+
+/**
+ * `GET /forum/topics/:id/posts`. `replies=true` — без первого сообщения:
+ * оно стоит отдельно (`ForumTopicView.firstPost`).
+ */
 export const listForumPostsSchema = pageQuerySchema.extend({
   limit: z.coerce.number().int().positive().max(100).default(FORUM_POSTS_PAGE_SIZE),
+  sort: forumPostSortSchema.default('OLD'),
+  replies: z.stringbool().optional(),
 });
 export type ListForumPostsQuery = z.infer<typeof listForumPostsSchema>;
 
-/** Страница темы, на которой стоит сообщение с этим номером. */
+/**
+ * Страница ответов по порядку (`OLD`), на которой стоит сообщение с этим
+ * номером. Первое сообщение — «статья» над ответами: оно на первой странице.
+ */
 export function forumPostPage(number: number, limit: number = FORUM_POSTS_PAGE_SIZE): number {
-  return Math.max(1, Math.ceil(number / limit));
+  return Math.max(1, Math.ceil((number - 1) / limit));
 }
 
-/** `GET /forum/posts` — сообщения игрока для профиля, новые первыми. */
-export const listForumPlayerPostsSchema = pageQuerySchema.extend({
-  authorPlayerId: z.uuid(),
+/**
+ * `GET /forum/posts` — лента сообщений всего форума, как «Комментарии» у
+ * RTTF: фильтры по разделу, типу предмета, автору, тексту (ADR-067).
+ */
+export const listForumFeedSchema = pageQuerySchema.extend({
+  authorPlayerId: z.uuid().optional(),
+  section: z.string().regex(FORUM_SECTION_SLUG_PATTERN).optional(),
+  subjectType: forumSubjectTypeSchema.optional(),
+  q: z.string().trim().min(2).max(100).optional(),
+  sort: z.enum(['NEW', 'OLD', 'TOP']).default('NEW'),
 });
-export type ListForumPlayerPostsQuery = z.infer<typeof listForumPlayerPostsSchema>;
+export type ListForumFeedQuery = z.infer<typeof listForumFeedSchema>;
 
-/** Сообщение в ленте — с темой, чтобы строка вела куда надо. */
+/** Сообщение в ленте — с темой, разделом и предметом, чтобы строка вела куда надо. */
 export const forumPostItemSchema = z.object({
   id: z.uuid(),
   number: z.number().int().positive(),
   topic: z.object({ id: z.uuid(), title: z.string() }),
+  section: z.object({ slug: z.string(), title: z.string() }),
+  subject: forumSubjectSchema.nullable(),
   author: forumAuthorSchema.nullable(),
+  role: z.enum(FORUM_POST_ROLES).nullable(),
   /** Начало текста. */
   excerpt: z.string(),
   createdAt: z.iso.datetime(),
@@ -406,3 +486,55 @@ export const forumMuteViewSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export type ForumMuteView = z.infer<typeof forumMuteViewSchema>;
+
+// ---------------------------------------------------------------- правила и предупреждения (ADR-067)
+
+/**
+ * Пункты «Правил общения» — `/forum/rules`. Модератор ссылается на пункт,
+ * скрывая сообщение или предупреждая: как у RTTF, санкция называет правило.
+ */
+export const FORUM_RULES = ['ABUSE', 'FLOOD', 'ADS', 'DUPLICATE', 'OFFTOPIC', 'OTHER'] as const;
+export const forumRuleSchema = z.enum(FORUM_RULES);
+export type ForumRule = z.infer<typeof forumRuleSchema>;
+
+/** Предупреждение без скрытия — `POST /admin/forum/warnings`; уходит уведомлением. */
+export const forumWarningInputSchema = z
+  .object({
+    userId: z.uuid(),
+    postId: z.uuid().optional(),
+    rule: forumRuleSchema,
+    comment: z.string().trim().min(1).max(300).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.rule === 'OTHER' && value.comment === undefined) {
+      ctx.addIssue({ code: 'custom', path: ['comment'], message: 'Опишите нарушение' });
+    }
+  });
+export type ForumWarningInput = z.infer<typeof forumWarningInputSchema>;
+
+// ---------------------------------------------------------------- сбоку на форуме (ADR-067)
+
+/** `GET /forum/online` — «Сейчас на сайте: игроков N». */
+export const forumOnlineSchema = z.object({ players: z.number().int().nonnegative() });
+export type ForumOnline = z.infer<typeof forumOnlineSchema>;
+
+/**
+ * `GET /forum/birthdays` — дни рождения сегодня по времени Казахстана.
+ * Только игроки, которые показывают дату полностью (ADR-037): у остальных
+ * посторонним виден лишь год.
+ */
+export const forumBirthdaySchema = z.object({
+  playerId: z.uuid(),
+  name: z.string(),
+  photoUrl: z.string().nullable(),
+  rating: z.number().nullable(),
+  age: z.number().int().positive(),
+});
+export type ForumBirthday = z.infer<typeof forumBirthdaySchema>;
+
+/** Обсуждение новости на странице клуба и тренера — ссылка «Обсудить (N)». */
+export const forumDiscussionLinkSchema = z.object({
+  topicId: z.uuid(),
+  replies: z.number().int().nonnegative(),
+});
+export type ForumDiscussionLink = z.infer<typeof forumDiscussionLinkSchema>;

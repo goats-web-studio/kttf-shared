@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { forumRuleSchema } from './forum.js';
 import { pageQuerySchema } from './pagination.js';
 
 /**
@@ -104,6 +105,22 @@ export const notificationViewSchema = z.discriminatedUnion('type', [
       postId: z.uuid().nullable(),
       number: z.number().int().positive().nullable(),
       reason: z.string(),
+    }),
+  }),
+  /**
+   * Предупреждение модератора без скрытия (ADR-067): какое правило и где.
+   * Сообщения может не быть — предупреждение за поведение в целом.
+   */
+  z.object({
+    ...base,
+    type: z.literal('FORUM_WARNING'),
+    data: z.object({
+      rule: forumRuleSchema,
+      comment: z.string().nullable(),
+      topicId: z.uuid().nullable(),
+      topicTitle: z.string().nullable(),
+      postId: z.uuid().nullable(),
+      number: z.number().int().positive().nullable(),
     }),
   }),
 ]);

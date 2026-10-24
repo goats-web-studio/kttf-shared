@@ -11,6 +11,7 @@ import {
   type PostKind,
 } from './club-content.js';
 import { COACH_IMAGE_PATH_PATTERN } from './coach.js';
+import { forumDiscussionLinkSchema } from './forum.js';
 import { pageQuerySchema } from './pagination.js';
 
 /**
@@ -72,6 +73,8 @@ export const coachPostViewSchema = z.object({
   /** Скрыта администратором: публично не видна, тренер видит причину. */
   hidden: z.boolean(),
   hiddenReason: z.string().nullable(),
+  /** Тема форума этой записи — «Обсудить (N)» (ADR-067); `null` у скрытой. */
+  discussion: forumDiscussionLinkSchema.nullable(),
 });
 export type CoachPostView = z.infer<typeof coachPostViewSchema>;
 
