@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   coachVisibilitySchema,
+  confirmPlayerSchema,
   createPlayerSchema,
   listPlayersSchema,
   playerListItemSchema,
@@ -165,6 +166,7 @@ describe('игрок в ответе', () => {
       rating: '250.00',
       ratedMatches: 0,
       isProvisional: true,
+      confirmed: true,
       createdAt: '2026-08-30T00:00:00.000Z',
     };
 
@@ -195,6 +197,7 @@ describe('игрок в ответе', () => {
       rating: '250.00',
       ratedMatches: 0,
       isProvisional: true,
+      confirmed: true,
       createdAt: '2026-08-30T00:00:00.000Z',
       birthDate: '2001-04-12',
       playingHand: 'RIGHT',
@@ -298,6 +301,7 @@ describe('список игроков — ADR-054', () => {
       rating: '250.00',
       ratedMatches: 0,
       isProvisional: true,
+      confirmed: true,
       createdAt: '2026-08-29T00:00:00.000Z',
     };
     const equipment = {
@@ -331,5 +335,21 @@ describe('стартовый рейтинг от организатора — AD
 
   it('не обязателен: свой профиль начинается с 250', () => {
     expect(createPlayerSchema.safeParse(valid).success).toBe(true);
+  });
+});
+
+describe('игровой профиль — ADR-072', () => {
+  const club = '00000000-0000-4000-8000-0000000000a1';
+
+  it('подтверждение — от имени клуба и с оценкой по сетке стартового рейтинга', () => {
+    expect(confirmPlayerSchema.safeParse({ clubId: club, startRating: 325 }).success).toBe(true);
+    expect(confirmPlayerSchema.safeParse({ clubId: club, startRating: 330 }).success).toBe(false);
+    expect(confirmPlayerSchema.safeParse({ clubId: club }).success).toBe(false);
+    expect(confirmPlayerSchema.safeParse({ startRating: 325 }).success).toBe(false);
+  });
+
+  it('анкеты без рейтинга в поиск — только по флагу', () => {
+    expect(listPlayersSchema.parse({}).withUnconfirmed).toBeUndefined();
+    expect(listPlayersSchema.parse({ withUnconfirmed: 'true' }).withUnconfirmed).toBe(true);
   });
 });

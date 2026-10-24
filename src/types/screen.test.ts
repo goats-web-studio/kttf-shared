@@ -31,6 +31,7 @@ const player = {
   rating: '294.80',
   ratedMatches: 3,
   isProvisional: true,
+  confirmed: true,
   createdAt: '2026-09-01T08:20:00.000Z',
 };
 

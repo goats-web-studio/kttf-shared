@@ -200,6 +200,21 @@ export const ERROR_CODES = {
   DUEL_TIME_INVALID: 'DUEL_TIME_INVALID',
   /** Счёт не по формату матча: `details.setsToWin`. */
   DUEL_SCORE_INVALID: 'DUEL_SCORE_INVALID',
+
+  // ---------- игровой профиль: ADR-072 ----------
+
+  /**
+   * У игрока анкета без рейтинга: игровой профиль ещё не завёл и не
+   * подтвердил организатор. Ни турнира, ни дуэли, ни места в рейтинге.
+   */
+  PLAYER_NOT_CONFIRMED: 'PLAYER_NOT_CONFIRMED',
+  /**
+   * Привязаться нельзя. `details.reason`: `TAKEN` — у профиля уже есть
+   * аккаунт, `OWN_CONFIRMED` — у вошедшего уже есть свой игровой профиль,
+   * `NOT_CONFIRMED` — выбранный профиль сам без рейтинга, `COACH_PAGE` —
+   * страница тренера есть у обоих.
+   */
+  PLAYER_CLAIM_INVALID: 'PLAYER_CLAIM_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

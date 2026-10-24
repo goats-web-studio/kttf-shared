@@ -208,8 +208,13 @@ export const startRatingSchema = z
   .multipleOf(START_RATING_STEP);
 
 /**
- * Заведение профиля. `startRating` есть только у профиля, который
- * организатор заводит другому человеку: свой профиль начинается с 250.
+ * Заведение профиля.
+ *
+ * `startRating` — у игрового профиля, который организатор заводит другому
+ * человеку, и там он обязателен (ADR-072): рейтинг задаётся по уровню игры,
+ * а не умолчанием. Свой профиль без него — анкета без рейтинга: ни турниров,
+ * ни места в рейтинге, пока организатор её не подтвердит или человек не
+ * привяжется к заведённому им профилю.
  */
 export const createPlayerSchema = z
   .object({ ...profile, startRating: startRatingSchema.optional() })
@@ -218,6 +223,19 @@ export const createPlayerSchema = z
     coachIsSingle(value, ctx);
   });
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
+
+/**
+ * Подтверждение анкеты организатором — ADR-072.
+ *
+ * Человек завёл анкету сам и пришёл на турнир: организатор не заводит ему
+ * второй профиль, а подтверждает этот, задав рейтинг по уровню игры. Клуб —
+ * тот, от чьего имени подтверждают: право проверяется по нему.
+ */
+export const confirmPlayerSchema = z.object({
+  clubId: z.uuid(),
+  startRating: startRatingSchema,
+});
+export type ConfirmPlayerInput = z.infer<typeof confirmPlayerSchema>;
 
 /**
  * Правка профиля: `null` очищает поле, отсутствие поля его не трогает.
@@ -290,6 +308,12 @@ export const listPlayersSchema = pageQuerySchema.extend({
    */
   withoutAccount: z.stringbool().optional(),
   /**
+   * Показать и анкеты без рейтинга — ADR-072. Нужно организатору, который
+   * ищет пришедшего на турнир: анкету он подтверждает, а не заводит второй
+   * профиль. Без флага в списке только игровые профили — рейтинг.
+   */
+  withUnconfirmed: z.stringbool().optional(),
+  /**
    * Только те, кого уже назвали тренером хотя бы раз.
    *
    * Роли тренера в продукте ещё нет, она развивается отдельно. Пока «тренер»
@@ -344,6 +368,12 @@ export const playerViewSchema = z.object({
   rating: z.string(),
   ratedMatches: z.number().int(),
   isProvisional: z.boolean(),
+  /**
+   * Игровой профиль — завёл или подтвердил организатор (ADR-072). `false` —
+   * анкета, которую человек завёл сам: `rating` у неё — умолчание схемы, не
+   * оценка игры, и показывать его нельзя.
+   */
+  confirmed: z.boolean(),
   createdAt: z.iso.datetime(),
 });
 export type PlayerView = z.infer<typeof playerViewSchema>;

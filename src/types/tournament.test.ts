@@ -336,6 +336,7 @@ describe('участник в ответе', () => {
         rating: '250.00',
         ratedMatches: 0,
         isProvisional: true,
+        confirmed: true,
         createdAt: '2026-08-30T00:00:00.000Z',
       },
     };
