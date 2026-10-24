@@ -37,7 +37,8 @@ export type ForumPostRole = (typeof FORUM_POST_ROLES)[number];
  * Тема с предметом (F2): турнир, клуб, тренер, товар. Одна тема на предмет;
  * она же — обсуждение или отзывы на странице предмета. Новость или акция
  * клуба и тренера (`CLUB_POST`, `COACH_POST`) — тоже тема: публикуется на
- * форуме сама, и под ней обсуждают (ADR-067).
+ * форуме сама, и под ней обсуждают (ADR-067). Дуэль (`DUEL`, ADR-068) —
+ * обсуждение на странице дуэли.
  */
 export const FORUM_SUBJECT_TYPES = [
   'TOURNAMENT',
@@ -46,6 +47,7 @@ export const FORUM_SUBJECT_TYPES = [
   'PRODUCT',
   'CLUB_POST',
   'COACH_POST',
+  'DUEL',
 ] as const;
 export const forumSubjectTypeSchema = z.enum(FORUM_SUBJECT_TYPES);
 export type ForumSubjectType = z.infer<typeof forumSubjectTypeSchema>;

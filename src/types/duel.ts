@@ -114,6 +114,13 @@ export const DUEL_OPEN_MAX = 3;
 export const DUEL_CHALLENGES_PER_DAY = 10;
 /** Откликов за сутки. */
 export const DUEL_RESPONSES_PER_DAY = 20;
+/**
+ * За сколько минут до согласованного начала можно начать матч и внести
+ * счёт: пришли в зал пораньше — играют, не дожидаясь минуты в минуту.
+ */
+export const DUEL_START_EARLY_MINUTES = 60;
+/** За сколько часов до начала — напоминание обоим (`DUEL_REMINDER`). */
+export const DUEL_REMINDER_HOURS = 3;
 /** Пороги пометок `PAIR_FREQUENT` / `ONE_SIDED` / `BIG_GAIN`. */
 export const DUEL_FLAG_WINDOW_DAYS = 30;
 export const DUEL_FLAG_PAIR_COUNT = 3;
@@ -194,6 +201,11 @@ export const createDuelSchema = z
     slots: z.array(duelSlotInputSchema).min(1).max(DUEL_SLOTS_MAX),
     /** «Играю атакующе, хочу потренировать приём подачи». */
     note: text(500).optional(),
+    /**
+     * Как связаться: телефон, WhatsApp, Telegram — как человек напишет.
+     * Видит только соперник и только после согласования (ADR-068).
+     */
+    contact: text(100).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.kind === 'DUEL' && !value.rated) {
@@ -222,6 +234,8 @@ export const respondDuelSchema = z
     slotId: z.uuid().optional(),
     proposed: duelSlotInputSchema.optional(),
     message: text(500).optional(),
+    /** Контакт для автора — после согласования, как `createDuelSchema.contact`. */
+    contact: text(100).optional(),
   })
   .refine((value) => (value.slotId === undefined) !== (value.proposed === undefined), {
     path: ['slotId'],
@@ -248,6 +262,41 @@ export type ReportDuelInput = z.infer<typeof reportDuelSchema>;
 /** Несогласие со счётом — `POST /duels/:id/dispute`, второй участник. */
 export const disputeDuelSchema = z.object({ comment: text(500) });
 export type DisputeDuelInput = z.infer<typeof disputeDuelSchema>;
+
+// ---------------------------------------------------------------- матч (ADR-068)
+
+/**
+ * Партия на табло — `POST /duels/:id/sets`, участник начатого матча.
+ * `index` — сколько партий уже записано у отправителя: второе нажатие
+ * той же партии с другого телефона не запишется дважды (`DUEL_INVALID_STATE`).
+ * Партия сверх формата (у кого-то уже `setsToWin`) — `DUEL_SCORE_INVALID`.
+ */
+export const duelSetSchema = z.object({
+  winnerId: z.uuid(),
+  index: z.number().int().min(0).max(6),
+});
+export type DuelSetInput = z.infer<typeof duelSetSchema>;
+
+/** Отмена последней партии — `POST /duels/:id/sets/undo`, `index` — сколько записано. */
+export const duelUndoSetSchema = z.object({ index: z.number().int().min(1).max(7) });
+export type DuelUndoSetInput = z.infer<typeof duelUndoSetSchema>;
+
+/**
+ * Перенос — `POST /duels/:id/reschedule`: участник назначенной, ещё не
+ * начатой игры предлагает новое время; новое предложение заменяет прежнее.
+ * Второй принимает (`/reschedule/accept`) или отказывает
+ * (`/reschedule/decline`), предложивший отзывает (`/reschedule/withdraw`).
+ * До согласия действует прежнее время.
+ */
+export const rescheduleDuelSchema = z.object({
+  slot: duelSlotInputSchema,
+  message: text(300).optional(),
+});
+export type RescheduleDuelInput = z.infer<typeof rescheduleDuelSchema>;
+
+/** Свой контакт в назначенной игре — `POST /duels/:id/contact`; `null` — убрать. */
+export const duelContactSchema = z.object({ contact: text(100).nullable() });
+export type DuelContactInput = z.infer<typeof duelContactSchema>;
 
 /**
  * Решение спора администратором — `POST /admin/duels/:id/resolve`: счёт
@@ -406,6 +455,31 @@ export const duelViewSchema = duelItemSchema.extend({
   annulReason: z.string().nullable(),
   /** Рейтинговая, но счёт обсчитан без рейтинга (предел частоты). */
   ratingSkipped: z.enum(['PAIR', 'PLAYER']).nullable(),
+  /**
+   * Табло (ADR-068): матч начат — `startedAt`, победители партий по
+   * порядку — `sets`. Видно всем: за дуэлью можно следить.
+   */
+  startedAt: z.iso.datetime().nullable(),
+  sets: z.array(z.uuid()),
+  /** С какого момента можно начать матч и внести счёт: начало − 60 мин. */
+  startableAt: z.iso.datetime().nullable(),
+  /** Предложенный перенос, пока второй не ответил. Видят только участники. */
+  reschedule: z
+    .object({
+      startsAt: z.iso.datetime(),
+      endsAt: z.iso.datetime(),
+      proposedById: z.uuid(),
+      message: z.string().nullable(),
+      createdAt: z.iso.datetime(),
+    })
+    .nullable(),
+  /**
+   * Контакты — только участникам назначенной и дальше: свой (`mine`, чтобы
+   * поправить) и соперника (`counterpart`). Остальным — `null`.
+   */
+  contacts: z
+    .object({ mine: z.string().nullable(), counterpart: z.string().nullable() })
+    .nullable(),
   can: z.object({
     respond: z.boolean(),
     withdraw: z.boolean(),
@@ -414,6 +488,14 @@ export const duelViewSchema = duelItemSchema.extend({
     report: z.boolean(),
     confirm: z.boolean(),
     dispute: z.boolean(),
+    /** Начать матч: участник рейтинговой назначенной, с `startableAt`. */
+    start: z.boolean(),
+    /** Записывать партии: участник начатого матча, пока счёт не внесён. */
+    score: z.boolean(),
+    /** Предложить перенос: участник назначенной, не начатой. */
+    reschedule: z.boolean(),
+    /** Ответить на перенос — тот, кто его не предлагал. */
+    answerReschedule: z.boolean(),
   }),
 });
 export type DuelView = z.infer<typeof duelViewSchema>;

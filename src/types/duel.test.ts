@@ -81,3 +81,21 @@ describe('setsToWin', () => {
     expect([setsToWin(3), setsToWin(5), setsToWin(7)]).toEqual([2, 3, 4]);
   });
 });
+
+describe('матч и перенос (ADR-068)', () => {
+  it('партия — победитель и сколько уже записано', async () => {
+    const { duelSetSchema, rescheduleDuelSchema } = await import('./duel.js');
+
+    expect(duelSetSchema.safeParse({ winnerId: CLUB, index: 0 }).success).toBe(true);
+    expect(duelSetSchema.safeParse({ winnerId: CLUB, index: -1 }).success).toBe(false);
+    expect(rescheduleDuelSchema.safeParse({ slot: SLOT }).success).toBe(true);
+    expect(
+      rescheduleDuelSchema.safeParse({ slot: { ...SLOT, endsAt: SLOT.startsAt } }).success,
+    ).toBe(false);
+  });
+
+  it('контакт при создании — до 100 знаков', () => {
+    expect(createDuelSchema.safeParse({ ...duel, contact: '+7 701 000 00 00' }).success).toBe(true);
+    expect(createDuelSchema.safeParse({ ...duel, contact: 'x'.repeat(101) }).success).toBe(false);
+  });
+});

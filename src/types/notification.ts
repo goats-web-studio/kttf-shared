@@ -185,6 +185,26 @@ export const notificationViewSchema = z.discriminatedUnion('type', [
     type: z.literal('DUEL_COMPLETED'),
     data: z.object({ ...duelRef, delta: z.string().nullable() }),
   }),
+  /**
+   * Перенос времени (ADR-068): предложен — второму участнику (`PROPOSED`),
+   * принят или отклонён — предложившему (`ACCEPTED`, `DECLINED`).
+   * `startsAt` — предложенное время.
+   */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_RESCHEDULE'),
+    data: z.object({
+      ...duelRef,
+      startsAt: z.iso.datetime(),
+      action: z.enum(['PROPOSED', 'ACCEPTED', 'DECLINED']),
+    }),
+  }),
+  /** Напоминание обоим за 3 часа до начала: с кем, когда и где. */
+  z.object({
+    ...base,
+    type: z.literal('DUEL_REMINDER'),
+    data: z.object({ ...duelRef, startsAt: z.iso.datetime(), venueName: z.string() }),
+  }),
   /** Счёт оспорен — внёсшему: решает администратор. */
   z.object({
     ...base,
