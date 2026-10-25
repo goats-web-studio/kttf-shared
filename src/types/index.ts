@@ -11,6 +11,8 @@ export * from './coach.js';
 export * from './coach-content.js';
 export * from './coach-students.js';
 export * from './duel.js';
+export * from './feed.js';
+export * from './follow.js';
 export * from './forum.js';
 export * from './home-stats.js';
 export * from './match.js';
