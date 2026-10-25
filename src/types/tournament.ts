@@ -311,6 +311,13 @@ export const registrationViewSchema = z.object({
   /** Снимок рейтинга на старте турнира, `null` до старта — ТС 5.4. */
   ratingAtStart: z.string().nullable(),
   matchesAtStart: z.number().int().nullable(),
+  /**
+   * Сыграно турниров на старте — новичок или нет (ADR-069). Нужен прогнозу
+   * дельты в консоли (ADR-077); по умолчанию — для старых снимков.
+   */
+  tournamentsAtStart: z.number().int().nullable().default(null),
+  /** Когда снялся или отмечен неявкой — порядок технических побед (ADR-077). */
+  withdrawnAt: z.iso.datetime().nullable().default(null),
   createdAt: z.iso.datetime(),
   player: playerViewSchema,
   /**

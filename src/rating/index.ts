@@ -61,3 +61,5 @@ export {
   duelRatingBlock,
 } from './duel.js';
 export type { DuelRatingInput, DuelRatingResult, RatedDuelRecord } from './duel.js';
+export { projectDeltas } from './project.js';
+export type { ProjectedMatch, ProjectedParticipant } from './project.js';

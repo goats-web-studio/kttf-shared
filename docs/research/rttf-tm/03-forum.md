@@ -8,14 +8,14 @@ _Thread URL format: `https://rttf.ru/topics/NNNN` (abbreviated below as **t NNNN
 
 ## 0. Coverage and method (read this before trusting frequencies)
 
-| Board | Name | Topics listed | Pages (100/page) | Threads opened |
-| --- | --- | --- | --- | --- |
-| forum/3 | Пожелания и замечания по работе сайта | **219 (all)** | 3 | **202** (13 off-topic skipped; 4 return "Страница не найдена", incl. t 16543 "Настройка программы рассчёта турнира", 2026-10-12) |
-| forum/1 | Настольный теннис | 2,843 (all) | 29 | 117 selected by keyword (rating, слив, турнир, сетка, посев, организатор, взнос, трансляция, судья...) |
-| forum/2 | Всякое разное | 489 (all) | 6 | 27 selected |
-| forum/5 | Новости клубов | 1,363 (all) | 14 | 13 selected (fees, cashback, formats, referees) |
-| forum/4 | Темы из старого форума (архив) | 3,856+ titles (40 pages, back to 03.2016; older pages not listed) | 40+ | 3 (rating-dumping threads) |
-| forum/6 | Платные объявления | 26 | 1 | 0 (ads) |
+| Board   | Name                                  | Topics listed                                                     | Pages (100/page) | Threads opened                                                                                                                   |
+| ------- | ------------------------------------- | ----------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| forum/3 | Пожелания и замечания по работе сайта | **219 (all)**                                                     | 3                | **202** (13 off-topic skipped; 4 return "Страница не найдена", incl. t 16543 "Настройка программы рассчёта турнира", 2026-10-12) |
+| forum/1 | Настольный теннис                     | 2,843 (all)                                                       | 29               | 117 selected by keyword (rating, слив, турнир, сетка, посев, организатор, взнос, трансляция, судья...)                           |
+| forum/2 | Всякое разное                         | 489 (all)                                                         | 6                | 27 selected                                                                                                                      |
+| forum/5 | Новости клубов                        | 1,363 (all)                                                       | 14               | 13 selected (fees, cashback, formats, referees)                                                                                  |
+| forum/4 | Темы из старого форума (архив)        | 3,856+ titles (40 pages, back to 03.2016; older pages not listed) | 40+              | 3 (rating-dumping threads)                                                                                                       |
+| forum/6 | Платные объявления                    | 26                                                                | 1                | 0 (ads)                                                                                                                          |
 
 - **Total: 362 threads read, plus 13 Wayback snapshots of 10 mega-threads** (older comment windows of t 11189, 11341, 12069, 12493, 12810, 13257, 14498, 14813, 15536, 16040).
 - **Big limitation:** a thread page renders only the **opening post + the 20 newest comments**. Older comments load through a `POST /?ajax` call the reader proxy can't make. So for an 850-comment thread we saw about 5-10% (plus a Wayback window when one existed). Frequencies are therefore lower-bound estimates, weighted by the real comment counts shown on the board.
@@ -29,17 +29,20 @@ _Thread URL format: `https://rttf.ru/topics/NNNN` (abbreviated below as **t NNNN
 ## 1. Context worth knowing first
 
 **RTTF's scale.** Figures come from users quoting site statistics:
+
 - July 2024 (t 11189): 2,601 tournaments, 30,004 entries, 10,842 unique players. Rival TTW in the same month: 938 / 15,035.
 - February 2024 (t 14617): 2,755 tournaments, 36,419 entries, 14,964 unique players, 69,484 profiles in the database. TTW: 1,286 / 23,426.
 - About 45,000 players take part per year (t 15384). Regions outside Moscow already exceed Moscow in total entries.
 
 **Kazakhstan is already on RTTF.**
+
 - Duplicate-profile requests come from Усть-Каменогорск, Семей and Астана (t 12493).
 - Almaty and Astana tournaments appear under "Moscow" in the tournament list (t 15212).
 - User tiendi "rolled RTTF out to 3 clubs in Kazakhstan" (t 12482). In Astana, monthly official leagues seeded by RTTF rating draw "300+ people a month" (t 14382).
 - **This is KTTF's home turf. Those users already know RTTF's flaws.**
 
 **How RTTF runs, as described by the admins.**
+
 - RTTF doesn't run tournaments and has "почти никаких рычагов влияния на организаторов" (t 11245).
 - Clubs pay RTTF per tournament (t 11239, t 11245). By user accounts, the free tier is results by email published in 1-3 days; the paid tier adds online registration and live results (t 14617).
 - The TM was a third-party program. In January 2019 the admins said it "не принадлежит нам юридически". By April 2019: "теперь программа официально наша" (t 11425).
@@ -48,6 +51,7 @@ _Thread URL format: `https://rttf.ru/topics/NNNN` (abbreviated below as **t NNNN
 - The program's delta formula is out of date: "в программе в формулу подсчета дельты рейтинга не внесены последние изменения. Поэтому вся актуальная информация только на сайте" (t 12659, 2021).
 
 **The rating formula as users quote it** (t 13666, t 15292, t 11991, t 14984):
+
 - **Δ = [(100 − (Pв − Pп)) / 10] · k · D.** Pв is the winner's rating, Pп the loser's.
 - Δ = 0 if the winner is rated 100 or more above the loser. Rating can't drop below 1.
 - k (tournament coefficient) is 0.2-0.4, set by the field's average rating.
@@ -65,12 +69,14 @@ _Thread URL format: `https://rttf.ru/topics/NNNN` (abbreviated below as **t NNNN
 **Staffing.** Usually one club admin per session, often also selling sparring at about 2,000₽/h during the event (t 15714). Calls and results are typed into the TM on a laptop, and a TV monitor shows groups and brackets (t 13294, t 12465, t 16231).
 
 **Registration.**
+
 - Players register online on RTTF. Admins also add players offline, which bypasses the site's checks: "чтобы участвовать в турнире, не обязательно регистрироваться здесь" (t 11984).
 - Over-limit and phone-in registrations are allowed per club (t 14014).
 - Before the start the admin should press "загрузить актуальный рейтинг". Many don't (t 12460, t 16142).
 - Newcomers get a rating the admin picks: often 50, 100 or 150 "по наитию", sometimes by a receptionist (t 15492, t 15608). Rating operators later correct it.
 
 **Formats.**
+
 - Groups of 3-5, then a full-placement bracket. Also two finals, round robin for 3-8 players, long or short brackets, "classes" (players split by level), ladders, handicap doubles and team cups.
 - A rule of thumb from an experienced player (t 13225, SERGONY):
   - 3-8 players: round robin.
@@ -82,6 +88,7 @@ _Thread URL format: `https://rttf.ru/topics/NNNN` (abbreviated below as **t NNNN
 **Refereeing.** None at commercial events. Players count their own score and report it to the admin, who types whatever is dictated: "пошел к админу и сказал: запишите мне 0:3. Записали" (t 13257). Liga Pro uses paid referees with tablets (t 15479). One club gives a free entry for scoring 4 matches (t 13233).
 
 **Fees and prizes.**
+
 - Fees run 200-800₽, 1,000+ for strong or open events, and about 450-500₽ is typical (t 15468, t 14384, t 16481).
 - Prize funds are usually conditional, e.g. "при условии участия 16 и более человек... 15 и меньше – приз получает только победитель" (t 15743). Fili offers 50% of fees for Max-800+ (t 13281).
 - Models clubs have tried (t 11710, t 11744, t 13794, t 11653, t 13110):
@@ -92,6 +99,7 @@ _Thread URL format: `https://rttf.ru/topics/NNNN` (abbreviated below as **t NNNN
   - pensioner and time-of-day pricing.
 
 **After the tournament.**
+
 - Results upload online, or files are emailed and an operator enters them: "обрабатываются людьми, причем на двух сторонах" (t 14217).
 - Extra "rating games" are often recorded after the event (t 15556, t 15608).
 - Corrections go through the "Нашли ошибку" form or the info@ inbox.
@@ -420,18 +428,18 @@ Each item: what people say → where (thread, date) → frequency. Items marked 
 
 ## 4. Praised features (keep parity or beat them)
 
-| Feature | Evidence |
-| --- | --- |
-| Online registration + live results on the site | "чего у других рейтингов нет в принципе" (t 13247), "Как же здорово... он-лайн" (t 11853) |
-| Density and visibility of tournaments (left column "Ближайшие турниры": time, status, club, count) | t 11238 "абсолютный плюс", t 11189 |
-| Private opponent notes highlighted in registration and live lists | t 11957, t 14257, t 16342 |
-| Rating chart, "лучшие победы" (all time / year / quarter), place in ranking | t 11749, t 11945, t 15764, t 14449 |
-| Offline-capable TM (laptop, even paper) | t 12482 |
-| Fast results (1-3 days) and responsive central corrections compared with TTW | t 14617 |
-| Fast club onboarding compared with TTW | t 14617 |
-| Doubles pair registration by either partner | t 11618 |
-| Head-to-head button (added on request) | t 12257 |
-| Out-of-competition mode, separate non-playing-hand rating | many threads (also abused) |
+| Feature                                                                                            | Evidence                                                                                  |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Online registration + live results on the site                                                     | "чего у других рейтингов нет в принципе" (t 13247), "Как же здорово... он-лайн" (t 11853) |
+| Density and visibility of tournaments (left column "Ближайшие турниры": time, status, club, count) | t 11238 "абсолютный плюс", t 11189                                                        |
+| Private opponent notes highlighted in registration and live lists                                  | t 11957, t 14257, t 16342                                                                 |
+| Rating chart, "лучшие победы" (all time / year / quarter), place in ranking                        | t 11749, t 11945, t 15764, t 14449                                                        |
+| Offline-capable TM (laptop, even paper)                                                            | t 12482                                                                                   |
+| Fast results (1-3 days) and responsive central corrections compared with TTW                       | t 14617                                                                                   |
+| Fast club onboarding compared with TTW                                                             | t 14617                                                                                   |
+| Doubles pair registration by either partner                                                        | t 11618                                                                                   |
+| Head-to-head button (added on request)                                                             | t 12257                                                                                   |
+| Out-of-competition mode, separate non-playing-hand rating                                          | many threads (also abused)                                                                |
 
 ---
 

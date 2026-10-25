@@ -345,6 +345,9 @@ describe('участник в ответе', () => {
       ...registration,
       coach: null,
       paid: null,
+      // Старые снимки без полей ADR-077 читаются.
+      tournamentsAtStart: null,
+      withdrawnAt: null,
     });
     expect(registrationViewSchema.safeParse({ ...registration, ratingAtStart: 250 }).success).toBe(
       false,

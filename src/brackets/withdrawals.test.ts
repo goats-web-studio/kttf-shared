@@ -91,3 +91,23 @@ describe('техническая победа в сетке за снявшег�
     expect(bracketWalkover({ a: 'y', b: null }, new Set(['y']), 3)).toBeNull();
   });
 });
+
+describe('снялись оба — порядок снятия (ADR-077)', () => {
+  it('победа тому, кто снялся позже', () => {
+    const result = applyWithdrawals(
+      [{ a: 'early', b: 'late' }],
+      ['early', 'late'],
+      3,
+      new Map([
+        ['early', 1000],
+        ['late', 2000],
+      ]),
+    );
+
+    expect(result).toEqual([{ a: 'early', b: 'late', setsA: 0, setsB: 3, resultType: 'WALKOVER' }]);
+  });
+
+  it('без времени у кого-то — никому', () => {
+    expect(applyWithdrawals([{ a: 'x', b: 'y' }], ['x', 'y'], 3, new Map([['x', 1]]))).toEqual([]);
+  });
+});

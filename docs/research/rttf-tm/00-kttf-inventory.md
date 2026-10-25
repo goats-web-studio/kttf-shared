@@ -9,18 +9,18 @@ _Paths: `shared/` = `kttf-shared/src`, `back/` = `kttf-back/src/features`, `fron
 
 Source: `kttf-back/prisma/schema.prisma` (19 tables), mirrored in `docs/03-tech-spec.md` §4.
 
-| Entity | State |
-| --- | --- |
-| **Tournament** — one category per tournament: name, club, `startsAt`, `registrationEndsAt`, `entryFee` (₸), `maxParticipants`, `ratingCapMin/Max`, `reviewOutOfRating`, `birthYearFrom/To`, `genderLimit`, `level` (CLUB/REGIONAL/NATIONAL = T factor), `tableCount`, `formatConfig` (JSON, Zod), `seedingConfig`, `description`, `prizeInfo` (free text), `publicToken` (TV screen), `version` (offline sync) | ✅ |
-| **Status machine** `DRAFT → PUBLISHED → REG_OPEN → REG_CLOSED → RUNNING → FINISHED → RATED`, `CANCELLED` from anything except RATED. `back/tournaments/tournament-lifecycle.ts`; the front copy that picks the buttons is `front/features/tournaments/lifecycle.ts` (duplicated rule, tech debt §8 of 05-state) | ✅ No way back (for example REG_CLOSED → REG_OPEN), no "results published" status from spec 4.1 |
-| **Stage** (`order`, `type` GROUPS/KNOCKOUT/ROUND_ROBIN/CONSOLATION, `config` JSON) → **Group** (`label`, `order`; members are derived from its matches, not stored) → **Match** | ✅ |
-| **Match**: `playerAId/BId` (nullable), `sourceA/B` `{WINNER\|LOSER, matchId}` (the whole bracket is created up front, ADR-019), `status` PENDING/PLAYING/FINISHED (QUEUED and CANCELLED exist but are unused), `tableNumber`, `setsA/B`, `setScores` JSON `[[11,9],…]`, `resultType` NORMAL/WALKOVER/RETIRED, `bracketRound/Slot`, `startedAt/finishedAt` | ✅ |
-| **TieDecision** (referee's order for an unresolved tie, per group) | ✅ |
-| **Registration**: status REGISTERED/PENDING/WAITLIST/CONFIRMED/PLAYING/WITHDRAWN/NO_SHOW/REJECTED, `seed`, `isRated` (out of competition), `ratingAtStart`/`matchesAtStart` (taken at start), `paidAt/paymentId` (unused) | ✅ |
-| **Player** — single players only, no pair or team entity. Fields: rating projection (`rating`, `ratedMatches`, `isProvisional`), `trustScore` (unused), hand/grip/equipment, coach | ✅ singles · ❌ doubles/teams |
-| **Club** + **ClubMember** role OWNER/ORGANIZER/REFEREE; `User.isAdmin` (ADR-046); City/Country directory | ✅ |
-| **RatingEvent** (event journal; the projection lives on Player), **AuditLog**, **SyncOperation** | ✅ |
-| `Transaction`, `Tariff`, `RatingAnomaly`; RatingEvent types `MANUAL_ADJUST`/`RECALC` | ❌ Schema only, no code writes them |
+| Entity                                                                                                                                                                                                                                                                                                                                                                                                         | State                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Tournament** — one category per tournament: name, club, `startsAt`, `registrationEndsAt`, `entryFee` (₸), `maxParticipants`, `ratingCapMin/Max`, `reviewOutOfRating`, `birthYearFrom/To`, `genderLimit`, `level` (CLUB/REGIONAL/NATIONAL = T factor), `tableCount`, `formatConfig` (JSON, Zod), `seedingConfig`, `description`, `prizeInfo` (free text), `publicToken` (TV screen), `version` (offline sync) | ✅                                                                                              |
+| **Status machine** `DRAFT → PUBLISHED → REG_OPEN → REG_CLOSED → RUNNING → FINISHED → RATED`, `CANCELLED` from anything except RATED. `back/tournaments/tournament-lifecycle.ts`; the front copy that picks the buttons is `front/features/tournaments/lifecycle.ts` (duplicated rule, tech debt §8 of 05-state)                                                                                                | ✅ No way back (for example REG_CLOSED → REG_OPEN), no "results published" status from spec 4.1 |
+| **Stage** (`order`, `type` GROUPS/KNOCKOUT/ROUND_ROBIN/CONSOLATION, `config` JSON) → **Group** (`label`, `order`; members are derived from its matches, not stored) → **Match**                                                                                                                                                                                                                                | ✅                                                                                              |
+| **Match**: `playerAId/BId` (nullable), `sourceA/B` `{WINNER\|LOSER, matchId}` (the whole bracket is created up front, ADR-019), `status` PENDING/PLAYING/FINISHED (QUEUED and CANCELLED exist but are unused), `tableNumber`, `setsA/B`, `setScores` JSON `[[11,9],…]`, `resultType` NORMAL/WALKOVER/RETIRED, `bracketRound/Slot`, `startedAt/finishedAt`                                                      | ✅                                                                                              |
+| **TieDecision** (referee's order for an unresolved tie, per group)                                                                                                                                                                                                                                                                                                                                             | ✅                                                                                              |
+| **Registration**: status REGISTERED/PENDING/WAITLIST/CONFIRMED/PLAYING/WITHDRAWN/NO_SHOW/REJECTED, `seed`, `isRated` (out of competition), `ratingAtStart`/`matchesAtStart` (taken at start), `paidAt/paymentId` (unused)                                                                                                                                                                                      | ✅                                                                                              |
+| **Player** — single players only, no pair or team entity. Fields: rating projection (`rating`, `ratedMatches`, `isProvisional`), `trustScore` (unused), hand/grip/equipment, coach                                                                                                                                                                                                                             | ✅ singles · ❌ doubles/teams                                                                   |
+| **Club** + **ClubMember** role OWNER/ORGANIZER/REFEREE; `User.isAdmin` (ADR-046); City/Country directory                                                                                                                                                                                                                                                                                                       | ✅                                                                                              |
+| **RatingEvent** (event journal; the projection lives on Player), **AuditLog**, **SyncOperation**                                                                                                                                                                                                                                                                                                               | ✅                                                                                              |
+| `Transaction`, `Tariff`, `RatingAnomaly`; RatingEvent types `MANUAL_ADJUST`/`RECALC`                                                                                                                                                                                                                                                                                                                           | ❌ Schema only, no code writes them                                                             |
 
 **Roles in practice.** Owner and organizer run the tournament: lifecycle, draw, participants, tie decisions (`assertClubStaff`). Any club member, the referee included, may enter scores (`back/tournaments/console-access.ts`). Known permissions defect from 05-state: the referee can enter a score but gets `FORBIDDEN` on `TIE_DECISION`, which contradicts ADR-008. The owner's current goal defers the referee role.
 
@@ -30,23 +30,23 @@ Source: `kttf-back/prisma/schema.prisma` (19 tables), mirrored in `docs/03-tech-
 
 **Schemes** (`shared/types/tournament-format.ts`, engine `shared/brackets/*`, draw `back/tournaments/draw.ts`):
 
-| Format | State |
-| --- | --- |
-| Round robin, 1 or 2 cycles (`rounds`; the second cycle swaps sides) | ✅ |
-| Single elimination with seeding and byes | ✅ |
-| 3rd-place match (`thirdPlace`) | ✅ |
-| Groups → knockout (`GROUPS_KNOCKOUT`, N advance per group, `groupRounds` 1/2) | ✅ |
-| Groups → final groups by place (`GROUPS_FINAL_GROUPS`; the k-th final group is everyone who finished k-th) | ✅ |
-| Final groups with carried-over results ("с зачётом") | ❌ Final groups replay everyone from scratch (`planFinalGroups`) |
-| Placement bracket for non-advancers (`exitBracket`, stage CONSOLATION; places 9+ go straight after the main bracket, ADR-045) | ✅ only for GROUPS_KNOCKOUT |
-| All places played out (classification for 5–8, 3–4 inside the bracket, and so on) | ❌ Losers of the same round share a place range (`SHARED`). Only 3rd place is separated |
-| Consolation / double elimination / lower bracket | ❌ The schema rejects `consolation: true`. Open question ОВ-15 (who drops into the lower bracket) blocks it |
-| Multiple brackets after groups (A/B finals by place) | ❌ Only one main bracket + one exit bracket |
-| Fill up to bracket size with the best 3rd places (cross-group ratios, spec 6.7) | ❌ Blocked by ОВ-16 |
-| Main bracket size cap ("128 entered, 64 play") | ❌ |
-| Elimination after N losses, Swiss, team events, doubles | ❌ None of them |
-| Per-round match length (final, 3rd place, semifinal … 1/64, counted back from the final; `playoffSetsToWin`, `shared/brackets/match-length.ts`, ADR-044) | ✅ Best of 3/5/7 only (`setsToWin` 2/3/4) |
-| Saved scheme templates, import/export of schemes | ❌ Spec 5.3 marks this V2 |
+| Format                                                                                                                                                   | State                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Round robin, 1 or 2 cycles (`rounds`; the second cycle swaps sides)                                                                                      | ✅                                                                                                          |
+| Single elimination with seeding and byes                                                                                                                 | ✅                                                                                                          |
+| 3rd-place match (`thirdPlace`)                                                                                                                           | ✅                                                                                                          |
+| Groups → knockout (`GROUPS_KNOCKOUT`, N advance per group, `groupRounds` 1/2)                                                                            | ✅                                                                                                          |
+| Groups → final groups by place (`GROUPS_FINAL_GROUPS`; the k-th final group is everyone who finished k-th)                                               | ✅                                                                                                          |
+| Final groups with carried-over results ("с зачётом")                                                                                                     | ❌ Final groups replay everyone from scratch (`planFinalGroups`)                                            |
+| Placement bracket for non-advancers (`exitBracket`, stage CONSOLATION; places 9+ go straight after the main bracket, ADR-045)                            | ✅ only for GROUPS_KNOCKOUT                                                                                 |
+| All places played out (classification for 5–8, 3–4 inside the bracket, and so on)                                                                        | ❌ Losers of the same round share a place range (`SHARED`). Only 3rd place is separated                     |
+| Consolation / double elimination / lower bracket                                                                                                         | ❌ The schema rejects `consolation: true`. Open question ОВ-15 (who drops into the lower bracket) blocks it |
+| Multiple brackets after groups (A/B finals by place)                                                                                                     | ❌ Only one main bracket + one exit bracket                                                                 |
+| Fill up to bracket size with the best 3rd places (cross-group ratios, spec 6.7)                                                                          | ❌ Blocked by ОВ-16                                                                                         |
+| Main bracket size cap ("128 entered, 64 play")                                                                                                           | ❌                                                                                                          |
+| Elimination after N losses, Swiss, team events, doubles                                                                                                  | ❌ None of them                                                                                             |
+| Per-round match length (final, 3rd place, semifinal … 1/64, counted back from the final; `playoffSetsToWin`, `shared/brackets/match-length.ts`, ADR-044) | ✅ Best of 3/5/7 only (`setsToWin` 2/3/4)                                                                   |
+| Saved scheme templates, import/export of schemes                                                                                                         | ❌ Spec 5.3 marks this V2                                                                                   |
 
 **Algorithms in `shared/brackets`** (pure, 100% covered):
 
@@ -88,23 +88,23 @@ Source: `kttf-back/prisma/schema.prisma` (19 tables), mirrored in `docs/03-tech-
 
 ## 3. Registration
 
-| Feature | State |
-| --- | --- |
-| Self-registration with an eligibility check shared by screen and server (`shared/eligibility`, ADR-029): rating caps (bounds inclusive), birth year range, gender. All reasons are returned at once | ✅ |
-| Organizer adds a player by surname search (`front/features/tournaments/add-participant.tsx`) | ✅ |
-| Creating a new player inline from the tournament form | 🟡 Back: `POST /players` exists. Front: not built in the tournament form (commented in `add-participant.tsx`); players are created elsewhere |
-| Bulk paste / import of a player list | ❌ |
-| Unrated or guest players | 🟡 Every player gets a start rating of 250 and is provisional for 20 matches. There is no "guest without a profile", and organizers can't assign a start rating (ОВ-2) |
-| Out of competition (`isRated=false`, toggle in the participants panel; the whole match is excluded from rating for both players) | ✅ |
-| Out-of-rating-cap applications (`reviewOutOfRating` → PENDING → accept/reject; ADR-044) | ✅ |
-| Waitlist with automatic promotion | ✅ No manual promote button |
-| Manual seed numbers | ✅ |
-| Withdrawal: self-cancel until the deadline; organizer delete before start; WITHDRAWN at any time | ✅ |
-| NO_SHOW | 🟡 Back: accepted. Front: no button, display label only |
-| Late entries after registration closes | ❌ `register` needs `REG_OPEN` and a deadline that hasn't passed, organizer included. Nobody can be added after the draw |
-| Repeat the draw on withdrawal before start | ✅ The redraw wipes the previous one |
-| Entry fee | 🟡 A stored number only. No payment (V2), no "paid" mark (ОВ-6), no prize fund calculation (`prizeInfo` is free text) |
-| Non-playing hand, etc. | ✅ Hand and grip live on the player profile (ADR-035). Not used by tournament logic |
+| Feature                                                                                                                                                                                             | State                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Self-registration with an eligibility check shared by screen and server (`shared/eligibility`, ADR-029): rating caps (bounds inclusive), birth year range, gender. All reasons are returned at once | ✅                                                                                                                                                                     |
+| Organizer adds a player by surname search (`front/features/tournaments/add-participant.tsx`)                                                                                                        | ✅                                                                                                                                                                     |
+| Creating a new player inline from the tournament form                                                                                                                                               | 🟡 Back: `POST /players` exists. Front: not built in the tournament form (commented in `add-participant.tsx`); players are created elsewhere                           |
+| Bulk paste / import of a player list                                                                                                                                                                | ❌                                                                                                                                                                     |
+| Unrated or guest players                                                                                                                                                                            | 🟡 Every player gets a start rating of 250 and is provisional for 20 matches. There is no "guest without a profile", and organizers can't assign a start rating (ОВ-2) |
+| Out of competition (`isRated=false`, toggle in the participants panel; the whole match is excluded from rating for both players)                                                                    | ✅                                                                                                                                                                     |
+| Out-of-rating-cap applications (`reviewOutOfRating` → PENDING → accept/reject; ADR-044)                                                                                                             | ✅                                                                                                                                                                     |
+| Waitlist with automatic promotion                                                                                                                                                                   | ✅ No manual promote button                                                                                                                                            |
+| Manual seed numbers                                                                                                                                                                                 | ✅                                                                                                                                                                     |
+| Withdrawal: self-cancel until the deadline; organizer delete before start; WITHDRAWN at any time                                                                                                    | ✅                                                                                                                                                                     |
+| NO_SHOW                                                                                                                                                                                             | 🟡 Back: accepted. Front: no button, display label only                                                                                                                |
+| Late entries after registration closes                                                                                                                                                              | ❌ `register` needs `REG_OPEN` and a deadline that hasn't passed, organizer included. Nobody can be added after the draw                                               |
+| Repeat the draw on withdrawal before start                                                                                                                                                          | ✅ The redraw wipes the previous one                                                                                                                                   |
+| Entry fee                                                                                                                                                                                           | 🟡 A stored number only. No payment (V2), no "paid" mark (ОВ-6), no prize fund calculation (`prizeInfo` is free text)                                                  |
+| Non-playing hand, etc.                                                                                                                                                                              | ✅ Hand and grip live on the player profile (ADR-035). Not used by tournament logic                                                                                    |
 
 🐞 **Waitlist promoted mid-tournament.** Withdrawing a `PLAYING` participant runs `promoteFromWaitlist` (`back/tournaments/tournaments.service.ts` `updateRegistration`). With `maxParticipants` set and a waitlist present, a waitlisted player becomes CONFIRMED in the middle of a running tournament without being in the draw.
 
@@ -114,35 +114,35 @@ Source: `kttf-back/prisma/schema.prisma` (19 tables), mirrored in `docs/03-tech-
 
 Code: `front/routes/console/$tournamentId.tsx`, `front/features/console/*`, `back/matches/*`, `back/sync/*`.
 
-| Feature | State |
-| --- | --- |
-| One-page layout: tables, queue, standings, latest results; actions in dialogs; mobile 390×844 verified | ✅ |
-| Tables numbered 1..`tableCount`, three states (free / playing / awaiting next) (`queue.ts buildTables`) | ✅ The server does not check `tableNumber ≤ tableCount` or table occupancy |
-| Calling a pair: one-tap "На стол N" (lowest free table suggested), pick from the queue for a free table, or move to another table | ✅ Manual only |
-| Auto-assign when a table frees (spec 6.2 MVP) | ❌ |
-| Queue order: pairs with a player still at a table go last; never-played first; then waiting time; then round/slot | ✅ |
-| Hints "ждёт дольше всех" and "последняя игра у обоих" | ✅ |
-| Hint "решающая встреча группы" | ❌ |
-| Match timer on the table card, highlighted at 30+ minutes; "played X of Y" | ✅ |
-| Tournament duration or time estimate | ❌ |
-| Quick results (3:0 … 2:3 derived from `setsToWin`) plus walkover ("Неявка") per side | ✅ |
-| Set-by-set entry (optional toggle, `score-pad.tsx`) | ✅ Set scores are not shown on the public results page |
-| RETIRED (retirement during the match) | 🟡 Back and engine support it. Front has no input for it |
-| Edit a finished result (MATCH_EDIT, AuditLog before/after). Rejected if a later match that depends on it was played; an unplayed later playoff is silently rebuilt | ✅ |
-| Cancel: back to the queue, result and table cleared | ✅ |
-| Undo: snackbar "Отменить" after assigning; after a score only "Исправить" (reopen) | 🟡 No general undo |
-| Tie resolution panel (only for fully played groups, ↑/↓ reorder) | ✅ |
-| Withdrawal mid-tournament | 🟡 See notes below |
-| Late player insertion or swap during RUNNING | ❌ Swap (`POST /draw/swap`, ADR-033) only in REG_CLOSED |
-| Change the scheme after the draw | 🟡 Editing before start resets the draw (ADR-044). After start: ❌ |
-| Manual redistribution into finals or the playoff | ❌ The next stage is built automatically and has no editor |
-| Start finals before all groups end | ❌ |
-| Offline: Dexie `kttf-console` (`snapshots`, `outbox`); sync every 15 s, on `online`, or by button; badge shows SYNCED/SYNCING/OFFLINE; rejected operations stay visible; finish needs network. Server applies by `seq` and is idempotent by `clientOpId` (ADR-026/027) | ✅ Not yet field-tested with Wi-Fi off |
-| Audit log | 🟡 Result edits and finishing only |
-| Multiple operators (any club member; order of operations resolves conflicts) | ✅ |
-| Several tournaments at once | 🟡 One per route or tab. No combined hall view, no shared table pool |
-| Keyboard shortcuts | ❌ Touch-first; no hotkeys |
-| Finish button (only when all matches are FINISHED/CANCELLED and the outbox is empty) | ✅ |
+| Feature                                                                                                                                                                                                                                                                | State                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| One-page layout: tables, queue, standings, latest results; actions in dialogs; mobile 390×844 verified                                                                                                                                                                 | ✅                                                                         |
+| Tables numbered 1..`tableCount`, three states (free / playing / awaiting next) (`queue.ts buildTables`)                                                                                                                                                                | ✅ The server does not check `tableNumber ≤ tableCount` or table occupancy |
+| Calling a pair: one-tap "На стол N" (lowest free table suggested), pick from the queue for a free table, or move to another table                                                                                                                                      | ✅ Manual only                                                             |
+| Auto-assign when a table frees (spec 6.2 MVP)                                                                                                                                                                                                                          | ❌                                                                         |
+| Queue order: pairs with a player still at a table go last; never-played first; then waiting time; then round/slot                                                                                                                                                      | ✅                                                                         |
+| Hints "ждёт дольше всех" and "последняя игра у обоих"                                                                                                                                                                                                                  | ✅                                                                         |
+| Hint "решающая встреча группы"                                                                                                                                                                                                                                         | ❌                                                                         |
+| Match timer on the table card, highlighted at 30+ minutes; "played X of Y"                                                                                                                                                                                             | ✅                                                                         |
+| Tournament duration or time estimate                                                                                                                                                                                                                                   | ❌                                                                         |
+| Quick results (3:0 … 2:3 derived from `setsToWin`) plus walkover ("Неявка") per side                                                                                                                                                                                   | ✅                                                                         |
+| Set-by-set entry (optional toggle, `score-pad.tsx`)                                                                                                                                                                                                                    | ✅ Set scores are not shown on the public results page                     |
+| RETIRED (retirement during the match)                                                                                                                                                                                                                                  | 🟡 Back and engine support it. Front has no input for it                   |
+| Edit a finished result (MATCH_EDIT, AuditLog before/after). Rejected if a later match that depends on it was played; an unplayed later playoff is silently rebuilt                                                                                                     | ✅                                                                         |
+| Cancel: back to the queue, result and table cleared                                                                                                                                                                                                                    | ✅                                                                         |
+| Undo: snackbar "Отменить" after assigning; after a score only "Исправить" (reopen)                                                                                                                                                                                     | 🟡 No general undo                                                         |
+| Tie resolution panel (only for fully played groups, ↑/↓ reorder)                                                                                                                                                                                                       | ✅                                                                         |
+| Withdrawal mid-tournament                                                                                                                                                                                                                                              | 🟡 See notes below                                                         |
+| Late player insertion or swap during RUNNING                                                                                                                                                                                                                           | ❌ Swap (`POST /draw/swap`, ADR-033) only in REG_CLOSED                    |
+| Change the scheme after the draw                                                                                                                                                                                                                                       | 🟡 Editing before start resets the draw (ADR-044). After start: ❌         |
+| Manual redistribution into finals or the playoff                                                                                                                                                                                                                       | ❌ The next stage is built automatically and has no editor                 |
+| Start finals before all groups end                                                                                                                                                                                                                                     | ❌                                                                         |
+| Offline: Dexie `kttf-console` (`snapshots`, `outbox`); sync every 15 s, on `online`, or by button; badge shows SYNCED/SYNCING/OFFLINE; rejected operations stay visible; finish needs network. Server applies by `seq` and is idempotent by `clientOpId` (ADR-026/027) | ✅ Not yet field-tested with Wi-Fi off                                     |
+| Audit log                                                                                                                                                                                                                                                              | 🟡 Result edits and finishing only                                         |
+| Multiple operators (any club member; order of operations resolves conflicts)                                                                                                                                                                                           | ✅                                                                         |
+| Several tournaments at once                                                                                                                                                                                                                                            | 🟡 One per route or tab. No combined hall view, no shared table pool       |
+| Keyboard shortcuts                                                                                                                                                                                                                                                     | ❌ Touch-first; no hotkeys                                                 |
+| Finish button (only when all matches are FINISHED/CANCELLED and the outbox is empty)                                                                                                                                                                                   | ✅                                                                         |
 
 **Withdrawal mid-tournament, in detail**
 
@@ -156,17 +156,17 @@ Code: `front/routes/console/$tournamentId.tsx`, `front/features/console/*`, `bac
 
 ## 5. Public side
 
-| Feature | State |
-| --- | --- |
-| Hall TV screen `/screen/:token`, no login. Shows tables with timers and a "Вызов" mark for 2 minutes, next pairs, latest results, rotating group matrices and brackets, progress and clock. Live via SSE; the last state stays on screen when offline (ADR-025) | ✅ Event bus is in-memory, single instance only. Local mode without internet (ОВ-4) ❌ |
-| Results page `/tournaments/:id`: places (shared and unresolved shown), group tables, brackets (CONSOLATION included), matches, rating deltas | ✅ No live updates (refetch on focus, 10 s staleTime); no set scores; no links to player profiles |
-| Calendar (city, club, dates, status in the URL) | 🟡 No rating-cap or age filters (ОВ-18) |
-| Country rating list (search, city, club) | 🟡 No gender or age filters (ОВ-18) |
-| Player profile: SVG rating curve, tournament history, paginated matches, head-to-head | 🟡 No stats or match filters (ОВ-19) |
-| Club list and club page | ✅ |
-| Home page news feed generated from results | ✅ |
-| Notifications (push, Telegram, WhatsApp autopost) | ❌ V2, ОВ-5 |
-| i18n ru and kk (689 keys each, type-checked) | 🟡 No English. No language switcher in the UI; the language is taken from the browser |
+| Feature                                                                                                                                                                                                                                                         | State                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Hall TV screen `/screen/:token`, no login. Shows tables with timers and a "Вызов" mark for 2 minutes, next pairs, latest results, rotating group matrices and brackets, progress and clock. Live via SSE; the last state stays on screen when offline (ADR-025) | ✅ Event bus is in-memory, single instance only. Local mode without internet (ОВ-4) ❌            |
+| Results page `/tournaments/:id`: places (shared and unresolved shown), group tables, brackets (CONSOLATION included), matches, rating deltas                                                                                                                    | ✅ No live updates (refetch on focus, 10 s staleTime); no set scores; no links to player profiles |
+| Calendar (city, club, dates, status in the URL)                                                                                                                                                                                                                 | 🟡 No rating-cap or age filters (ОВ-18)                                                           |
+| Country rating list (search, city, club)                                                                                                                                                                                                                        | 🟡 No gender or age filters (ОВ-18)                                                               |
+| Player profile: SVG rating curve, tournament history, paginated matches, head-to-head                                                                                                                                                                           | 🟡 No stats or match filters (ОВ-19)                                                              |
+| Club list and club page                                                                                                                                                                                                                                         | ✅                                                                                                |
+| Home page news feed generated from results                                                                                                                                                                                                                      | ✅                                                                                                |
+| Notifications (push, Telegram, WhatsApp autopost)                                                                                                                                                                                                               | ❌ V2, ОВ-5                                                                                       |
+| i18n ru and kk (689 keys each, type-checked)                                                                                                                                                                                                                    | 🟡 No English. No language switcher in the UI; the language is taken from the browser             |
 
 ---
 
@@ -212,16 +212,16 @@ The only "export" is the public results page and the TV link (copy to clipboard)
 
 **Open questions blocking tournament features**
 
-| Question | Blocks |
-| --- | --- |
-| ОВ-15 | Lower bracket |
-| ОВ-16 | Cross-group comparison and filling up to bracket size |
-| ОВ-1 | Computed vs declared T |
-| ОВ-2 | Start rating |
-| ОВ-3 | Constant calibration |
-| ОВ-4 | Local TV mode |
-| ОВ-6 | Cash "paid" mark |
-| ОВ-18, ОВ-19 | Public filters and stats |
+| Question     | Blocks                                                |
+| ------------ | ----------------------------------------------------- |
+| ОВ-15        | Lower bracket                                         |
+| ОВ-16        | Cross-group comparison and filling up to bracket size |
+| ОВ-1         | Computed vs declared T                                |
+| ОВ-2         | Start rating                                          |
+| ОВ-3         | Constant calibration                                  |
+| ОВ-4         | Local TV mode                                         |
+| ОВ-6         | Cash "paid" mark                                      |
+| ОВ-18, ОВ-19 | Public filters and stats                              |
 
 **Half-implemented or stubbed**
 

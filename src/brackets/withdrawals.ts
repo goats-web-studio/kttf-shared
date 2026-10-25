@@ -76,6 +76,12 @@ export function applyWithdrawals(
   pending: readonly PendingMatch[],
   withdrawn: readonly ParticipantId[],
   setsToWin: number,
+  /**
+   * Когда кто снялся — ADR-077, мс. Снялись оба: победа тому, кто снялся
+   * позже, — он был в турнире, когда соперник ушёл, и победа досталась ему
+   * тогда. Время неизвестно хоть у одного — встреча не засчитывается никому.
+   */
+  order: ReadonlyMap<ParticipantId, number> = new Map(),
 ): PlayedMatch[] {
   if (setsToWin < 1) {
     throw new Error('applyWithdrawals: setsToWin должно быть положительным');
@@ -88,16 +94,23 @@ export function applyWithdrawals(
     const aOut = absent.has(match.a);
     const bOut = absent.has(match.b);
 
-    // Снялись оба — засчитывать некому. Встреча просто не состоялась и в
-    // таблицу не попадает: техническая победа существует ради соперника,
-    // а соперника здесь нет.
-    if (aOut === bOut) continue;
+    if (!aOut && !bOut) continue;
+
+    // Снялись оба: победа тому, кто ушёл позже (ADR-077). Без времени у
+    // обоих встреча не засчитывается никому — так было до ADR-077.
+    let aLoses = aOut;
+    if (aOut && bOut) {
+      const aAt = order.get(match.a);
+      const bAt = order.get(match.b);
+      if (aAt === undefined || bAt === undefined || aAt === bAt) continue;
+      aLoses = aAt < bAt;
+    }
 
     result.push({
       a: match.a,
       b: match.b,
-      setsA: aOut ? 0 : setsToWin,
-      setsB: aOut ? setsToWin : 0,
+      setsA: aLoses ? 0 : setsToWin,
+      setsB: aLoses ? setsToWin : 0,
       resultType: 'WALKOVER',
     });
   }
