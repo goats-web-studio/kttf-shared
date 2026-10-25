@@ -14,6 +14,7 @@ export * from './duel.js';
 export * from './feed.js';
 export * from './follow.js';
 export * from './forum.js';
+export * from './markup.js';
 export * from './home-stats.js';
 export * from './match.js';
 export * from './media.js';
