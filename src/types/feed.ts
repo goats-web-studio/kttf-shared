@@ -57,6 +57,8 @@ export type FeedSource = z.infer<typeof feedSourceSchema>;
 /** Счётчики обсуждения на форуме. */
 export const feedDiscussionSchema = z.object({
   topicId: z.uuid(),
+  /** Первое сообщение темы — его правят и «лайкают» (ADR-075). */
+  postId: z.uuid().nullable(),
   /** Ответов — без первого сообщения. */
   comments: z.number().int().nonnegative(),
   likes: z.number().int().nonnegative(),
@@ -70,6 +72,10 @@ const base = {
   at: z.iso.datetime(),
   source: feedSourceSchema,
   discussion: feedDiscussionSchema.nullable(),
+  /** Закреплена администратором — стоит над лентой (ADR-075). */
+  pinned: z.boolean(),
+  /** Скрыта из ленты администратором; приходит только в его выдаче. */
+  hidden: z.boolean(),
 };
 
 /** Новость или акция клуба и тренера (ADR-055, ADR-059). */
@@ -91,6 +97,8 @@ export const feedTopicItemSchema = z.object({
   title: z.string(),
   excerpt: z.string(),
   images: z.array(forumImageSchema),
+  /** Автор убрал запись в архив: на стене и в ленте её нет, у него — во вкладке «Архив». */
+  archived: z.boolean(),
 });
 
 /** Объявлен турнир — запись открыта или скоро. */
@@ -164,3 +172,49 @@ export type FeedPage = z.infer<typeof feedPageSchema>;
  */
 export const FEED_POSTS_SECTION = 'posts';
 export const FEED_PORTAL_SECTION = 'kttf';
+
+// ---------------------------------------------------------------- стена игрока и управление лентой — ADR-075
+
+/** Стена игрока: его записи. Архив видит только он сам. */
+export const playerPostsQuerySchema = z.object({
+  archived: z.stringbool().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(FEED_PAGE_MAX).default(10),
+});
+export type PlayerPostsQuery = z.infer<typeof playerPostsQuerySchema>;
+
+export const playerPostsPageSchema = z.object({
+  items: z.array(feedTopicItemSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  limit: z.number().int().positive(),
+});
+export type PlayerPostsPage = z.infer<typeof playerPostsPageSchema>;
+
+/** Автор убирает запись в архив и возвращает её. */
+export const archiveTopicSchema = z.object({ archived: z.boolean() });
+export type ArchiveTopicInput = z.infer<typeof archiveTopicSchema>;
+
+/**
+ * Решение администратора по карточке ленты: закрепить наверху, скрыть из
+ * ленты. Ключ — `id` карточки (`club-post:…`, `topic:…`, `result:…`).
+ */
+export const feedCurationSchema = z
+  .object({
+    itemId: z.string().trim().min(3).max(120),
+    pinned: z.boolean().optional(),
+    hidden: z.boolean().optional(),
+  })
+  .refine((value) => value.pinned !== undefined || value.hidden !== undefined, {
+    message: 'Нужно указать pinned или hidden',
+  });
+export type FeedCurationInput = z.infer<typeof feedCurationSchema>;
+
+/** Выдача администратора: та же лента, со скрытыми. */
+export const adminFeedQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(FEED_PAGE_MAX).default(20),
+  /** Только скрытые или только закреплённые. */
+  only: z.enum(['HIDDEN', 'PINNED']).optional(),
+});
+export type AdminFeedQuery = z.infer<typeof adminFeedQuerySchema>;

@@ -6,6 +6,9 @@ import { z } from 'zod';
  * Подписаться можно на клуб, тренера и игрока: их новости, акции, турниры
  * и события приходят во вкладку ленты «Подписки». Число подписчиков видно
  * на странице — оно же говорит клубу, что страница работает (ADR-055).
+ *
+ * Тренер и его профиль игрока — один человек (ADR-075): подписка на страницу
+ * тренера — это подписка на игрока, счётчик у них общий.
  */
 
 export const FOLLOW_TARGETS = ['CLUB', 'COACH', 'PLAYER'] as const;
@@ -55,3 +58,9 @@ export const followSuggestionSchema = z.object({
   reason: followReasonSchema,
 });
 export type FollowSuggestion = z.infer<typeof followSuggestionSchema>;
+
+/** На кого подписан вошедший — раздел кабинета «Подписки» (ADR-075). */
+export const followedSchema = followSuggestionSchema.omit({ reason: true }).extend({
+  since: z.iso.datetime(),
+});
+export type Followed = z.infer<typeof followedSchema>;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { feedItemSchema, feedQuerySchema, FEED_PAGE_MAX } from './feed.js';
+import { feedCurationSchema, feedItemSchema, feedQuerySchema, FEED_PAGE_MAX } from './feed.js';
 import { followParamsSchema, followSuggestionsQuerySchema } from './follow.js';
 
 const ID = '00000000-0000-4000-8000-000000000001';
@@ -22,6 +22,8 @@ describe('лента — ADR-073', () => {
       at: '2026-10-25T10:00:00.000Z',
       source,
       discussion: null,
+      pinned: false,
+      hidden: false,
       kind: 'PROMO',
       title: 'Абонемент −20%',
       excerpt: 'До конца месяца',
@@ -40,6 +42,8 @@ describe('лента — ADR-073', () => {
       at: '2026-10-25T10:00:00.000Z',
       source: { ...source, kind: 'PLAYER' },
       discussion: null,
+      pinned: false,
+      hidden: false,
       achievement: { kind: 'LEVEL_UP', level: 11, rating: '1100.00', tournament: null },
     };
 
@@ -58,5 +62,14 @@ describe('подписки — ADR-073', () => {
 
   it('рекомендаций по умолчанию пять', () => {
     expect(followSuggestionsQuerySchema.parse({}).limit).toBe(5);
+  });
+});
+
+describe('управление лентой — ADR-075', () => {
+  it('решение по карточке — закрепить или скрыть, хоть одно', () => {
+    expect(feedCurationSchema.safeParse({ itemId: 'club-post:1', pinned: true }).success).toBe(
+      true,
+    );
+    expect(feedCurationSchema.safeParse({ itemId: 'club-post:1' }).success).toBe(false);
   });
 });
