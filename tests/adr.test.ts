@@ -204,11 +204,16 @@ describe('ADR-080 — мобилка: надёжность, доступност
     );
   });
 
-  it.skipIf(!HAS_MOBILE)('в настройках телефона — только тема, язык и отметка заставки', () => {
-    const settings = mobile('lib', 'app', 'settings.dart');
-    const keys = [...settings.matchAll(/static const String _\w+Key = '(\w+)';/g)].map((m) => m[1]);
-    expect(keys.sort()).toEqual(['introSeen', 'locale', 'theme']);
-  });
+  it.skipIf(!HAS_MOBILE)(
+    'в настройках телефона — только выбор человека: тема, язык, город, отметка заставки',
+    () => {
+      const settings = mobile('lib', 'app', 'settings.dart');
+      const keys = [...settings.matchAll(/static const String _\w+Key = '(\w+)';/g)].map(
+        (m) => m[1],
+      );
+      expect(keys.sort()).toEqual(['city', 'cityName', 'introSeen', 'locale', 'theme']);
+    },
+  );
 });
 
 describe('ADR-081 — мобилка выглядит как сайт', () => {
