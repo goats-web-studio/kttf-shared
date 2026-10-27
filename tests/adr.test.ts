@@ -211,6 +211,26 @@ describe('ADR-080 — мобилка: надёжность, доступност
   });
 });
 
+describe('ADR-081 — мобилка выглядит как сайт', () => {
+  const HAS_MOBILE = inWorkspace('kttf-mobile', 'pubspec.yaml');
+
+  it.skipIf(!HAS_MOBILE || !HAS_SIBLINGS)('гарнитуры мобилки — гарнитуры styles.css сайта', () => {
+    const styles = readWorkspace('kttf-front', 'src', 'styles.css');
+    const pubspec = readWorkspace('kttf-mobile', 'pubspec.yaml');
+    for (const family of ['Roboto Flex', 'JetBrains Mono']) {
+      expect(styles).toContain(`'${family}'`);
+      expect(pubspec).toContain(`- family: ${family}`);
+    }
+    expect(pubspec, 'Inter заменён гарнитурами сайта').not.toContain('family: Inter');
+  });
+
+  it.skipIf(!HAS_MOBILE)('рисунок страницы — перенос site-backdrop.tsx', () => {
+    expect(readWorkspace('kttf-mobile', 'lib', 'common', 'ui', 'backdrop.dart')).toContain(
+      'site-backdrop.tsx',
+    );
+  });
+});
+
 describe('ADR-005 — инструментарий', () => {
   it('линтер — ESLint, а не Biome: нужны type-aware правила против any', () => {
     expect(inProject('config', 'eslint.preset.js')).toBe(true);
@@ -345,6 +365,7 @@ describe('документация — источник истины', () => {
       'ADR-078',
       'ADR-079',
       'ADR-080',
+      'ADR-081',
     ]) {
       expect(decisions, `${adr} отсутствует в журнале`).toContain(adr);
     }
