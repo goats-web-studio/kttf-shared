@@ -182,6 +182,12 @@ describe('ADR-080 — мобилка: надёжность, доступност
     expect(mobile('lib', 'common', 'ui', 'avatar.dart')).toContain('.media(');
   });
 
+  it.skipIf(!HAS_MOBILE)('подписки в мобилке — от имени человека (ADR-073)', () => {
+    expect(mobile('lib', 'features', 'follows', 'follow_button.dart')).toContain(
+      'session.authorized(',
+    );
+  });
+
   it.skipIf(!HAS_MOBILE)('в настройках телефона — только тема, язык и отметка заставки', () => {
     const settings = mobile('lib', 'app', 'settings.dart');
     const keys = [...settings.matchAll(/static const String _\w+Key = '(\w+)';/g)].map((m) => m[1]);
