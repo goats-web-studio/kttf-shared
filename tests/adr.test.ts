@@ -166,6 +166,22 @@ describe('ADR-080 — мобилка: надёжность, доступност
     }
   });
 
+  it.skipIf(!HAS_MOBILE)('допуск на турнир в мобилке — этот движок, а не своё сравнение', () => {
+    const panel = mobile('lib', 'features', 'tournaments', 'registration_panel.dart');
+    expect(panel).toContain('checkEligibility(');
+    expect(panel).toContain('session.authorized(');
+  });
+
+  it.skipIf(!HAS_MOBILE)('лента: незнакомая карточка пропускается (ADR-073)', () => {
+    const feed = mobile('shared', 'lib', 'src', 'contract', 'feed.dart');
+    expect(feed).toContain('kttf-shared/src/types/feed.ts');
+    expect(feed).toContain('_ => null,');
+  });
+
+  it.skipIf(!HAS_MOBILE)('картинки с сервера — адрес API плюс путь', () => {
+    expect(mobile('lib', 'common', 'ui', 'avatar.dart')).toContain('.media(');
+  });
+
   it.skipIf(!HAS_MOBILE)('в настройках телефона — только тема, язык и отметка заставки', () => {
     const settings = mobile('lib', 'app', 'settings.dart');
     const keys = [...settings.matchAll(/static const String _\w+Key = '(\w+)';/g)].map((m) => m[1]);
