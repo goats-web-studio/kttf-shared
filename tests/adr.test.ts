@@ -8,6 +8,7 @@ import {
   listWorkspace,
   readPackageJson,
   readText,
+  readWorkspace,
 } from './repo.js';
 
 /**
@@ -107,6 +108,68 @@ describe('ADR-078 — мобильное приложение на Flutter, то
 
   it.skipIf(!HAS_MOBILE)('консоли судьи в мобилке нет — она в PWA (ADR-004)', () => {
     expect(inWorkspace('kttf-mobile', 'lib', 'features', 'console')).toBe(false);
+  });
+});
+
+describe('ADR-080 — мобилка: надёжность, доступность, офлайн', () => {
+  const HAS_MOBILE = inWorkspace('kttf-mobile', 'pubspec.yaml');
+  const mobile = (...segments: string[]): string => readWorkspace('kttf-mobile', ...segments);
+
+  it.skipIf(!HAS_MOBILE)('у решений мобилки свои ADR-тесты и виджет-тесты', () => {
+    expect(mobile('test', 'adr', 'adr_test.dart')).toContain('ADR-080');
+    for (const test of [
+      ['test', 'features', 'accessibility', 'text_scale_test.dart'],
+      ['test', 'features', 'accessibility', 'tablet_test.dart'],
+      ['test', 'app', 'session_test.dart'],
+      ['test', 'common', 'api', 'offline_test.dart'],
+    ]) {
+      expect(inWorkspace('kttf-mobile', ...test), test.join('/')).toBe(true);
+    }
+  });
+
+  it.skipIf(!HAS_MOBILE)('крупный шрифт — с потолком, контент на планшете — колонкой', () => {
+    const theme = mobile('lib', 'app', 'theme.dart');
+    expect(theme).toMatch(/maxTextScale = 1\.6;/);
+    expect(theme).toMatch(/maxContentWidth = 600;/);
+  });
+
+  it.skipIf(!HAS_MOBILE)('выпуск без адреса API или не по https не запускается', () => {
+    const api = mobile('lib', 'common', 'api', 'kttf_api.dart');
+    expect(api).toContain('release: kReleaseMode');
+    expect(api).toContain("uri.scheme != 'https'");
+  });
+
+  it.skipIf(!HAS_MOBILE)('refresh меняется один раз на все упавшие запросы (ADR-017)', () => {
+    const session = mobile('lib', 'app', 'session.dart');
+    expect(session).toContain('Future<T> authorized<T>');
+    expect(session).toContain('_renewing ??=');
+  });
+
+  it.skipIf(!HAS_MOBILE)('время — UTC+5, как на сайте и в этом пакете', () => {
+    const format = mobile('lib', 'common', 'format.dart');
+    expect(format).toContain('Duration(hours: 5)');
+    expect(format).not.toContain('.toLocal()');
+  });
+
+  it.skipIf(!HAS_MOBILE)('офлайн: в кэш — только публичное и прошедшее контракт', () => {
+    const api = mobile('lib', 'common', 'api', 'kttf_api.dart');
+    expect(api).toContain("method == 'GET' && accessToken == null ? this.cache : null");
+    expect(inWorkspace('kttf-mobile', 'lib', 'common', 'ui', 'offline_bar.dart')).toBe(true);
+  });
+
+  it.skipIf(!HAS_MOBILE || !HAS_SIBLINGS)('контакты клуба — перенос contacts.ts сайта', () => {
+    expect(inWorkspace('kttf-front', 'src', 'features', 'clubs', 'contacts.ts')).toBe(true);
+    const contacts = mobile('lib', 'features', 'clubs', 'contacts.dart');
+    expect(contacts).toContain('kttf-front/src/features/clubs/contacts.ts');
+    for (const helper of ['telegramHandle', 'instagramHandle', 'whatsappUri', 'routeUri']) {
+      expect(contacts).toContain(helper);
+    }
+  });
+
+  it.skipIf(!HAS_MOBILE)('в настройках телефона — только тема, язык и отметка заставки', () => {
+    const settings = mobile('lib', 'app', 'settings.dart');
+    const keys = [...settings.matchAll(/static const String _\w+Key = '(\w+)';/g)].map((m) => m[1]);
+    expect(keys.sort()).toEqual(['introSeen', 'locale', 'theme']);
   });
 });
 
@@ -243,6 +306,7 @@ describe('документация — источник истины', () => {
       'ADR-070',
       'ADR-078',
       'ADR-079',
+      'ADR-080',
     ]) {
       expect(decisions, `${adr} отсутствует в журнале`).toContain(adr);
     }

@@ -54,6 +54,11 @@ export function readText(...segments: string[]): string {
   return readFileSync(projectPath(...segments), 'utf8');
 }
 
+/** Файл соседнего репозитория: `readWorkspace('kttf-mobile', 'lib', …)`. */
+export function readWorkspace(...segments: string[]): string {
+  return readFileSync(workspacePath(...segments), 'utf8');
+}
+
 /** Исходники модуля без тестов: их зависимости в сборку не попадают. */
 export function listSources(...segments: string[]): string[] {
   return readdirSync(projectPath(...segments))
