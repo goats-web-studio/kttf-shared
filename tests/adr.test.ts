@@ -188,6 +188,22 @@ describe('ADR-080 — мобилка: надёжность, доступност
     );
   });
 
+  it.skipIf(!HAS_MOBILE)('мобилка — для игрока и тренера: маршрутов администратора нет', () => {
+    const api = mobile('lib', 'common', 'api', 'kttf_api.dart');
+    for (const route of ['/admin', '/draw', '/publish', '/open-registration']) {
+      expect(api, route).not.toContain(route);
+    }
+  });
+
+  it.skipIf(!HAS_MOBILE)('дуэли в мобилке — действия по can сервера (ADR-065)', () => {
+    const page = mobile('lib', 'features', 'duels', 'duel_page.dart');
+    expect(page).toContain('can.respond');
+    expect(page).toContain('can.confirm');
+    expect(mobile('shared', 'lib', 'src', 'contract', 'duel.dart')).toContain(
+      'kttf-shared/src/types/duel.ts',
+    );
+  });
+
   it.skipIf(!HAS_MOBILE)('в настройках телефона — только тема, язык и отметка заставки', () => {
     const settings = mobile('lib', 'app', 'settings.dart');
     const keys = [...settings.matchAll(/static const String _\w+Key = '(\w+)';/g)].map((m) => m[1]);
