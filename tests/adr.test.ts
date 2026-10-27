@@ -51,7 +51,14 @@ describe('ADR-001 — три репозитория, приложения раз
     // его из рабочей директории, а работа идёт по всем четырём репозиториям
     // сразу. Уехав в kttf-shared, правила перестанут действовать в kttf-back
     // и kttf-front — то есть ровно там, где пишется код.
-    const allowed = new Set(['kttf-back', 'kttf-front', 'kttf-shared', 'kttf-infra', 'CLAUDE.md']);
+    const allowed = new Set([
+      'kttf-back',
+      'kttf-front',
+      'kttf-shared',
+      'kttf-infra',
+      'kttf-mobile', // ADR-078
+      'CLAUDE.md',
+    ]);
     const unexpected = listWorkspace().filter((entry) => !allowed.has(entry));
     expect(
       unexpected,
@@ -69,6 +76,37 @@ describe('ADR-004 — фронтенд один, консоль внутри н�
 
   it.skipIf(!HAS_SIBLINGS)('консоль — модуль внутри kttf-front', () => {
     expect(inWorkspace('kttf-front', 'src', 'features', 'console')).toBe(true);
+  });
+});
+
+describe('ADR-078 — мобильное приложение на Flutter, тонкий клиент', () => {
+  const HAS_MOBILE = inWorkspace('kttf-mobile', 'pubspec.yaml');
+
+  it('ТЗ называет Flutter, а не Expo', () => {
+    const spec = readText('docs', '03-tech-spec.md');
+    const mobile = spec.slice(spec.indexOf('### 2.3. Мобильное'), spec.indexOf('### 2.4.'));
+    expect(mobile).toContain('Flutter');
+    expect(mobile).toContain('kttf-mobile');
+    expect(mobile, 'Expo заменён Flutter — ADR-078').not.toContain('Expo');
+  });
+
+  it.skipIf(!HAS_MOBILE)('у мобилки свои ADR-тесты и свои правила для агента', () => {
+    expect(inWorkspace('kttf-mobile', 'test', 'adr', 'adr_test.dart')).toBe(true);
+    expect(inWorkspace('kttf-mobile', 'CLAUDE.md')).toBe(true);
+  });
+
+  it.skipIf(!HAS_MOBILE)('перенос движка на Dart сверяется с этим кодом (ADR-079)', () => {
+    // Вторая реализация движка допустима только под паритетом: эталоны,
+    // снятые с TypeScript, и тест, который сравнивает с ними бит в бит.
+    expect(inWorkspace('kttf-mobile', 'shared', 'tool', 'parity.mjs')).toBe(true);
+    expect(inWorkspace('kttf-mobile', 'shared', 'test', 'parity', 'parity_test.dart')).toBe(true);
+    expect(
+      inWorkspace('kttf-mobile', 'shared', 'test', 'parity', 'fixtures', 'manifest.json'),
+    ).toBe(true);
+  });
+
+  it.skipIf(!HAS_MOBILE)('консоли судьи в мобилке нет — она в PWA (ADR-004)', () => {
+    expect(inWorkspace('kttf-mobile', 'lib', 'features', 'console')).toBe(false);
   });
 });
 
@@ -203,6 +241,8 @@ describe('документация — источник истины', () => {
       'ADR-016',
       'ADR-069',
       'ADR-070',
+      'ADR-078',
+      'ADR-079',
     ]) {
       expect(decisions, `${adr} отсутствует в журнале`).toContain(adr);
     }
