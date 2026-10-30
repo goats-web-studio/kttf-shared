@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { calculateStandings } from '../brackets/standings.js';
 
-import { screenPingSchema, screenViewSchema, SCREEN_EVENTS } from './screen.js';
+import {
+  screenPingSchema,
+  screenViewSchema,
+  setScreenControlSchema,
+  SCREEN_EVENTS,
+} from './screen.js';
 
 /**
  * Экран зала открывается по токену без авторизации, поэтому состав ответа
@@ -126,6 +131,7 @@ describe('состояние второго экрана', () => {
     // Готовая очередь в ответе означала бы второе правило вызова пар — на
     // сервере, где его никто не проверяет против того, что видит судья.
     expect(Object.keys(screenViewSchema.shape).sort()).toEqual([
+      'control',
       'players',
       'stages',
       'standings',
@@ -133,6 +139,16 @@ describe('состояние второго экрана', () => {
       'updatedAt',
       'withdrawn',
     ]);
+  });
+
+  it('закрепление слайда — только временное и только из четырёх слайдов (ADR-082)', () => {
+    expect(setScreenControlSchema.parse({ pin: 'bracket' })).toEqual({
+      pin: 'bracket',
+      minutes: 5,
+    });
+    expect(setScreenControlSchema.safeParse({ pin: 'bracket', minutes: 600 }).success).toBe(false);
+    expect(setScreenControlSchema.safeParse({ pin: 'ads' }).success).toBe(false);
+    expect(screenViewSchema.parse(view).control).toBeUndefined();
   });
 
   it('снявшиеся без поля читаются пустым списком — ADR-061', () => {

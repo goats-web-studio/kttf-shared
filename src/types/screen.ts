@@ -19,6 +19,30 @@ import { tournamentViewSchema } from './tournament.js';
  * бы, что стена и консоль расходятся в порядке вызова пар.
  */
 
+/** Слайд стены — ADR-082. */
+export const screenSlideSchema = z.enum(['tables', 'groups', 'bracket', 'results']);
+export type ScreenSlide = z.infer<typeof screenSlideSchema>;
+
+/**
+ * Слайд, закреплённый судьёй из консоли, — ADR-082.
+ *
+ * `pin: null` — стена листает сама. Закрепление всегда временное (`until`):
+ * судья, забывший вернуть «Авто», не оставит зал на одной сетке до конца
+ * турнира. Истёкшее закрепление сервер отдаёт как `null`.
+ */
+export const screenControlSchema = z.object({
+  pin: screenSlideSchema.nullable(),
+  until: z.iso.datetime().nullable(),
+});
+export type ScreenControlView = z.infer<typeof screenControlSchema>;
+
+/** Закрепить слайд на `minutes` минут или вернуть «Авто» (`pin: null`). */
+export const setScreenControlSchema = z.object({
+  pin: screenSlideSchema.nullable(),
+  minutes: z.number().int().min(1).max(60).default(5),
+});
+export type SetScreenControlInput = z.input<typeof setScreenControlSchema>;
+
 export const screenViewSchema = z.object({
   tournament: tournamentViewSchema,
   /**
@@ -45,6 +69,11 @@ export const screenViewSchema = z.object({
    * последнее состояние, и зритель обязан видеть, насколько оно свежее.
    */
   updatedAt: z.iso.datetime(),
+  /**
+   * Закреплённый из консоли слайд — ADR-082. Нет поля — стена листает сама:
+   * экран, собранный сервером до этого поля, читается.
+   */
+  control: screenControlSchema.optional(),
 });
 export type ScreenView = z.infer<typeof screenViewSchema>;
 
