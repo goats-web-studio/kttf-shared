@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Консоль — набросок</title>
+<style>
+@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-stretch: 25% 151%; src: url('fonts/roboto-flex-latin-wdth-normal.woff2') format('woff2-variations'); unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-stretch: 25% 151%; src: url('fonts/roboto-flex-cyrillic-wdth-normal.woff2') format('woff2-variations'); unicode-range: U+0400-045F; }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 100 800; src: url('fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0000-00FF; }
+:root { --paper: #fff; --paper-sunken: #f4f4f0; --line: #e3e3df; --line-strong: #c9c9c3; --ink-900: #1f1f1d; --ink-700: #454543; --ink-500: #666662; --ink-100: #e9e9e4;
+  --red-600: #c4231c; --red-50: #fff2f0; --ok: #197a4b; --ok-50: #e6f2eb; --ok-text: #145c39; --warn: #a66a00; --warn-50: #fbf1dc; --warn-text: #8f5b00; --gold-50: #fbf1d9; --gold: #e9c46a; --mono: 'JetBrains Mono', monospace; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Roboto Flex', sans-serif; color: var(--ink-900); background: var(--paper-sunken); font-size: 15px; }
+.top { background: var(--paper); border-bottom: 1px solid var(--line); }
+.wrap { max-width: 1440px; margin: 0 auto; padding: 16px; }
+.head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px; align-items: center; }
+h1 { margin: 0; font-size: 22px; }
+.meta { display: flex; gap: 12px; align-items: center; margin-top: 6px; font-size: 13px; color: var(--ink-500); }
+.badge { padding: 2px 10px; border-radius: 999px; background: var(--ink-100); color: var(--ink-900); font-weight: 600; }
+.bar { width: 200px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; } .bar i { display: block; height: 100%; width: 34%; background: var(--red-600); }
+.btns { display: flex; gap: 8px; }
+.btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper); display: inline-flex; align-items: center; gap: 8px; font: inherit; font-weight: 600; }
+.btn.ok { border-color: var(--ok); color: var(--ok-text); }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) 400px; gap: 20px; align-items: start; }
+h2 { font-size: 17px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
+h2 small { font-size: 13px; color: var(--ink-500); font-weight: 500; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+.tables { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.t { display: grid; grid-template-columns: 52px minmax(0,1fr) auto; align-items: center; min-height: 64px; overflow: hidden; }
+.t .no { align-self: stretch; display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: 24px; background: var(--paper-sunken); border-right: 1px solid var(--line); }
+.t .p { padding: 6px 12px; min-width: 0; } .t .p div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.t .s { padding: 0 12px; text-align: right; font-size: 13px; color: var(--ink-500); } .t .s b { display: block; font-family: var(--mono); font-size: 15px; color: var(--ink-900); }
+.t.call { box-shadow: inset 0 0 0 2px var(--warn); } .t.call .no { background: var(--warn); color: #fff; }
+.t.long .s b { color: var(--warn-text); }
+.t.long { box-shadow: inset 4px 0 0 var(--warn); }
+.t.free { min-height: 52px; } .t.free .p { color: var(--ok-text); font-weight: 600; }
+.q { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; margin-bottom: 8px; }
+.q small { display: block; color: var(--ink-500); font-size: 12px; }
+.q .go { min-height: 44px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--red-600); color: #fff; font: inherit; font-weight: 700; }
+.q.wait { color: var(--ink-500); } .q.wait .go { background: var(--ink-100); color: var(--ink-500); }
+.tv { padding: 12px; }
+.tv .frame { position: relative; width: 376px; height: 211.5px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line-strong); background: #000; }
+.tv iframe { width: 1920px; height: 1080px; border: 0; transform: scale(.1958); transform-origin: 0 0; pointer-events: none; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 10px; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+.seg span { min-height: 44px; display: grid; place-items: center; font-weight: 600; border-left: 1px solid var(--line-strong); }
+.seg span:first-child { border-left: 0; } .seg span.on { background: var(--ink-900); color: #fff; }
+.tvrow { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 13px; color: var(--ink-500); gap: 8px; }
+.pin { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink-900); }
+.pin i { width: 34px; height: 20px; border-radius: 10px; background: var(--line-strong); position: relative; } .pin i::after { content: ''; position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+.live { color: var(--ok-text); font-weight: 600; }
+.note { margin-top: 8px; padding: 8px 10px; background: var(--warn-50); color: var(--warn-text); border-radius: 8px; font-size: 13px; }
+.card { position: relative; }
+.callout { position: absolute; left: -10px; top: -10px; z-index: 2; background: var(--red-600); color: #fff; font-size: 13px; font-weight: 700; border-radius: 999px; width: 26px; height: 26px; display: grid; place-items: center; }
+.legend { margin-top: 18px; font-size: 13px; color: var(--ink-700); display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px 24px; }
+.legend b { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--red-600); color: #fff; font-size: 11px; margin-right: 6px; }
+</style>
+</head>
+<body>
+<div class="top"><div class="wrap head">
+ <div><h1>Кубок клуба KTTF — groups8</h1><div class="meta"><span class="badge">Групповой этап</span><span class="bar"><i></i></span><span>Сыграно 22 из 64</span></div></div>
+ <div class="btns"><span class="btn">Участники</span><span class="btn">Столы и длины</span><span class="btn">Экран для ТВ</span><span class="btn ok">● Всё отправлено</span></div>
+</div></div>
+<div class="wrap" style="position:relative">
+ <div class="grid">
+  <section><h2>Столы <small>8 заняты · 2 свободны · коснитесь стола</small></h2><div class="tables" id="tables"></div></section>
+  <section><h2>В ожидании <small>17 пар</small></h2><div id="queue"></div></section>
+  <section><h2>ТВ в зале <small class="live">● на связи</small></h2>
+   <div class="card tv"><div class="frame"><iframe src="proto.html?v=A&s=groups&fx=groups8"></iframe></div>
+    <div class="tvrow"><span>Сейчас: <b style="color:var(--ink-900)">Группы</b> · следующий слайд через 9 с</span></div>
+    <div class="seg"><span class="on">Авто</span><span>Столы</span><span>Группы</span><span>Сетка</span></div>
+    <div class="tvrow"><span class="pin"><i></i>Закрепить выбранный</span><span>вернётся к «Авто» через 5 мин</span></div>
+    <div class="note">Экран показывает то же, что этот предпросмотр: слайды листаются по часам сервера, а не по таймеру каждого ТВ.</div>
+   </div></section>
+ </div>
+ <div class="legend">
+  <span><b>1</b>Строка стола: номер, пара, время. Сыгранная встреча держит стол минуту, потом стол свободен.</span>
+  <span><b>2</b>«32 мин» жёлтым: встреча идёт дольше обычного — проверить стол. После 90 мин ТВ пишет «идёт» без минут.</span>
+  <span><b>3</b>Пара с игроком за другим столом серая и не зовётся; подпись говорит, кого ждём.</span>
+  <span><b>4</b>Предпросмотр ТВ и выбор слайда. «Авто» — по умолчанию; закрепление сбрасывается само.</span>
+ </div>
+</div>
+<script>
+const sh = (n) => { const [l, f] = n.split(' '); return `${l} ${f[0]}.`; };
+const rows = [
+  [1, 'Смирнова Дарья', 'Сатпаев Мирас', 'гр. 4', 'Вызов', 'call'], [2, 'Касымова Асель', 'Оспанов Айдос', 'гр. 5', '7 мин'], [3, 'Ермеков Бауыржан', 'Шайхутдинов Ринат', 'гр. 5', '12 мин'],
+  [4, 'Галимжанов Ержан', 'Мухамедкалиев Бахытжан', 'гр. 6', '18 мин'], [5, 'Петров Алексей', 'Сериков Даурен', 'гр. 6', '25 мин'], [6, 'Аманбаев Арлан', 'Жумабаев Санжар', 'гр. 7', '9 мин'],
+  [7, 'Нурланов Нурлан', 'Исабекова Жанар', 'гр. 7', '4 мин'], [8, 'Утепбергенов Кайрат', 'Беков Нурсултан', 'гр. 8', '32 мин', 'long'], [9], [10],
+];
+document.getElementById('tables').innerHTML = rows.map(([n, a, b, l, s, k]) => a
+  ? `<div class="card t ${k ?? ''}"><div class="no">${n}</div><div class="p"><div>${sh(a)}</div><div>${sh(b)}</div></div><div class="s">${l}<b>${s}</b></div></div>`
+  : `<div class="card t free"><div class="no">${n}</div><div class="p">Свободен — позвать пару</div><div class="s"></div></div>`).join('');
+const q = [['Хегай Сергей — Тен Павел', 'гр. 8 · ждёт дольше всех', 'На стол 9'], ['Иванов Иван — Ахметов Арман', 'гр. 4 · последняя у обоих', 'На стол 9'], ['Ахметов Арман — Сатпаев Мирас', 'гр. 4 · Сатпаев за столом 1', 'ждём', 'wait'], ['Касымова Асель — Ермеков Бауыржан', 'гр. 5 · оба за столами 2 и 3', 'ждём', 'wait']];
+document.getElementById('queue').innerHTML = q.map(([p, s, g, k]) => `<div class="card q ${k ?? ''}"><div>${p}<small>${s}</small></div><button class="go">${g}</button></div>`).join('');
+const call = (el, n) => { const c = document.createElement('div'); c.className = 'callout'; c.textContent = n; el.appendChild(c); };
+const t = document.querySelectorAll('#tables .t'); call(t[0], 1); call(t[7], 2); call(document.querySelectorAll('#queue .q')[2], 3); call(document.querySelector('.tv'), 4);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>

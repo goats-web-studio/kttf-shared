@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Экран зала — прототип</title>
+<style>
+@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-stretch: 25% 151%; src: url('fonts/roboto-flex-latin-wdth-normal.woff2') format('woff2-variations'); unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+@font-face { font-family: 'Roboto Flex'; font-weight: 100 1000; font-stretch: 25% 151%; src: url('fonts/roboto-flex-cyrillic-wdth-normal.woff2') format('woff2-variations'); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 100 800; src: url('fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0000-00FF, U+2000-206F, U+2212; }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 100 800; src: url('fonts/jetbrains-mono-cyrillic-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0400-045F; }
+
+/* Токены продукта (styles.css), не новые */
+:root {
+  --paper: #ffffff; --paper-sunken: #f4f4f0; --line: #e3e3df; --line-strong: #c9c9c3;
+  --ink-900: #1f1f1d; --ink-700: #454543; --ink-500: #666662; --ink-400: #8b8b86; --ink-100: #e9e9e4;
+  --red-50: #fff2f0; --red-100: #ffdfdb; --red-600: #c4231c; --red-700: #9e1912;
+  --ok: #197a4b; --ok-50: #e6f2eb; --ok-text: #145c39; --warn: #a66a00; --warn-50: #fbf1dc; --warn-text: #8f5b00;
+  --gold: #e9c46a; --gold-50: #fbf1d9; --gold-text: #6b4a00; --silver: #d5dae0; --silver-50: #eef0f3; --silver-text: #3e4652;
+  --bronze: #e8b48a; --bronze-50: #f6e7dc; --bronze-text: #7a3f1a;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* 5 кеглей стены (при 1920): подпись, текст, имя, крупное, номер */
+  --t-xs: 16px; --t-s: 20px; --t-m: 24px; --t-l: 32px; --t-xl: 48px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--paper-sunken); }
+body { font-family: 'Roboto Flex', system-ui, sans-serif; color: var(--ink-900); }
+/* Сцена 1920×1080, равномерно вписанная в любой экран */
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; padding: 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+header h1 { margin: 0; font-size: var(--t-l); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { margin-top: 8px; display: flex; align-items: center; gap: 16px; font-size: var(--t-xs); color: var(--ink-500); }
+.badge { padding: 4px 12px; border-radius: 999px; background: var(--ink-100); color: var(--ink-900); font-weight: 600; }
+.badge.ok { background: var(--ok-50); color: var(--ok-text); }
+.bar { width: 280px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--red-600); }
+.clock { text-align: right; }
+.clock b { font-family: var(--mono); font-size: var(--t-xl); line-height: 1; }
+.clock small { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 4px; font-size: var(--t-xs); color: var(--ok); }
+.clock small::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.brand { height: 28px; opacity: .9; margin-right: 24px; vertical-align: middle; }
+h2 { margin: 0 0 8px; font-size: var(--t-m); line-height: 1.2; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+h2 small { font-size: var(--t-xs); color: var(--ink-500); font-weight: 500; }
+.main { flex: 1; min-height: 0; display: grid; gap: 24px; }
+.col { min-height: 0; display: flex; flex-direction: column; gap: 24px; overflow: hidden; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+
+/* Столы — строка: номер | пара | время/счёт */
+.trows { display: grid; gap: 6px; }
+.trow { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; height: 56px; overflow: hidden; }
+.trow .no { align-self: stretch; display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: var(--t-l); background: var(--paper-sunken); border-right: 1px solid var(--line); }
+.trow .pair { padding: 4px 16px; min-width: 0; }
+.trow .pair div { font-size: var(--t-s); line-height: 1.25; white-space: nowrap; overflow: hidden; font-weight: 600; }
+.trow .pair div.lose { color: var(--ink-500); font-weight: 400; }
+.trow .pair div.win { color: var(--red-600); font-weight: 700; }
+.trow .st { padding: 0 16px; text-align: right; font-size: var(--t-xs); color: var(--ink-500); white-space: nowrap; }
+.trow .st b { display: block; font-family: var(--mono); font-size: var(--t-s); color: var(--ink-900); }
+.trow .pair .num { font-weight: 700; margin-left: 8px; }
+.trow.call { border-color: var(--warn); box-shadow: inset 0 0 0 2px var(--warn); }
+.trow.call .no { background: var(--warn); color: #fff; border-color: var(--warn); }
+.trow.call .st { color: var(--warn-text); font-weight: 700; }
+.trow.done .st { color: var(--ok-text); }
+.free { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--t-s); color: var(--ink-500); }
+.free span { font-family: var(--mono); font-weight: 700; color: var(--ok-text); background: var(--ok-50); border-radius: 999px; padding: 2px 14px; }
+
+/* Плитки столов */
+.tiles { display: grid; gap: 12px; }
+.tile { display: grid; grid-template-columns: 72px minmax(0,1fr); overflow: hidden; }
+.tile .no { display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: var(--t-xl); background: var(--paper-sunken); border-right: 1px solid var(--line); }
+.tile .body { padding: 10px 14px; min-width: 0; }
+.tile .lbl { display: flex; justify-content: space-between; gap: 8px; font-size: var(--t-xs); color: var(--ink-500); white-space: nowrap; }
+.tile .lbl b { font-weight: 700; color: var(--ink-700); }
+.tile .side { display: flex; justify-content: space-between; gap: 8px; font-size: 22px; line-height: 1.3; font-weight: 600; white-space: nowrap; }
+.tile .side span:first-child { overflow: hidden; }
+.tile .side.lose { color: var(--ink-500); font-weight: 400; }
+.tile .side.win { color: var(--red-600); font-weight: 700; }
+.tile .side .num { font-weight: 700; }
+.tile.call { border-color: var(--warn); box-shadow: inset 0 0 0 2px var(--warn); }
+.tile.call .no { background: var(--warn); color: #fff; }
+.tile.call .lbl b { color: var(--warn-text); }
+.tile.done .lbl b { color: var(--ok-text); }
+.tile.big .no { font-size: 64px; }
+.tile.big .side { font-size: var(--t-l); }
+.tile.big .lbl { font-size: var(--t-s); }
+
+/* Очередь */
+.qrows { display: grid; gap: 8px; }
+.q { display: grid; grid-template-columns: 40px minmax(0,1fr); align-items: center; gap: 8px; padding: 8px 14px; }
+.q .n { font-family: var(--mono); font-weight: 700; font-size: var(--t-m); color: var(--ink-500); text-align: center; }
+.q .p { font-size: var(--t-s); font-weight: 600; white-space: nowrap; overflow: hidden; }
+.q .p small { display: block; font-size: var(--t-xs); font-weight: 400; color: var(--ink-500); }
+.q.first { border-color: var(--gold); background: var(--gold-50); }
+.q.first .n { color: var(--gold-text); }
+.q.wait .p { color: var(--ink-500); }
+.empty { font-size: var(--t-s); color: var(--ink-500); }
+.recent .r { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 8px 14px; margin-bottom: 8px; }
+.recent .r .p { font-size: var(--t-s); white-space: nowrap; overflow: hidden; }
+.recent .r .p small { display: block; font-size: var(--t-xs); color: var(--ink-500); }
+.recent .r .num { font-size: var(--t-m); font-weight: 700; }
+.w { color: var(--red-600); font-weight: 700; }
+
+/* Группы */
+.groups { display: grid; gap: 16px; align-content: start; }
+.g { padding: 8px 12px 10px; }
+.g h3 { margin: 0 0 4px; display: flex; justify-content: space-between; align-items: baseline; font-family: var(--mono); font-size: var(--t-s); }
+.g h3 small { font-family: 'Roboto Flex'; font-size: var(--t-xs); color: var(--ok-text); font-weight: 600; }
+.g table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.g th { font-size: 14px; color: var(--ink-500); font-weight: 500; text-align: center; padding: 2px 0; }
+.g th.l { text-align: left; padding-left: 8px; }
+.g td { font-size: var(--t-s); line-height: 1.2; height: 34px; padding: 0; vertical-align: middle; text-align: center; border-top: 1px solid var(--line); white-space: nowrap; }
+.g td.nm { text-align: left; overflow: hidden; font-weight: 600; padding-left: 8px; }
+.g td.nm small { font-family: var(--mono); font-size: 14px; color: var(--ink-500); font-weight: 400; margin-left: 6px; }
+.g td.pl { font-family: var(--mono); color: var(--ink-500); }
+.g tr.thru td.pl { box-shadow: inset 4px 0 0 var(--ok); color: var(--ok-text); font-weight: 700; }
+.g td.pts { font-family: var(--mono); font-weight: 700; font-size: var(--t-m); }
+.g td.sets { font-family: var(--mono); color: var(--ink-700); font-size: 18px; }
+.cell { display: inline-block; vertical-align: middle; height: 26px; line-height: 26px; min-width: 46px; padding: 0 4px; border-radius: 4px; font-family: var(--mono); font-size: 17px; font-weight: 600; }
+.cell.won { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok-text); }
+.cell.lost { background: color-mix(in srgb, var(--red-600) 14%, transparent); color: var(--red-700); }
+.cell.self { background: var(--paper-sunken); }
+.cell.live { background: var(--warn-50); color: var(--warn-text); font-family: 'Roboto Flex'; font-size: 14px; }
+.cell.none { color: var(--ink-400); }
+
+/* Сетка */
+.bwrap { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.bracket { position: absolute; left: 0; top: 0; transform-origin: 0 0; display: flex; gap: var(--gx); }
+.round { width: var(--cw); display: flex; flex-direction: column; flex-shrink: 0; }
+.round .cap { height: 28px; font-size: 16px; font-weight: 700; color: var(--ink-500); text-align: center; }
+.round .cap.fin { color: var(--red-600); }
+.slots { flex: 1; display: flex; flex-direction: column; }
+.slot { flex: 1; position: relative; display: flex; align-items: center; }
+.m { width: 100%; position: relative; z-index: 1; }
+.m .s { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 6px; height: var(--rh); padding: 0 6px 0 10px; font-size: var(--bf); white-space: nowrap; }
+.m .s + .s { border-top: 1px solid var(--line); }
+.m .s .nm { overflow: hidden; }
+.m .s .rt { font-family: var(--mono); font-size: calc(var(--bf) * .72); color: var(--ink-500); }
+.m .s .sc { font-family: var(--mono); font-weight: 700; min-width: calc(var(--bf) * 1.3); text-align: center; border-radius: 4px; }
+.m .s.win .nm { font-weight: 700; }
+.m .s.win .sc { background: var(--red-600); color: #fff; }
+.m .s.lose { color: var(--ink-500); }
+.m .s.tbd { color: var(--ink-400); }
+.m.live { border-color: var(--warn); box-shadow: inset 0 0 0 2px var(--warn); }
+.m .tag { position: absolute; right: 0; top: -20px; font-size: 14px; font-weight: 700; color: var(--warn-text); }
+.ln { position: absolute; border-color: var(--line-strong); border-style: solid; border-width: 0; }
+.third { margin-top: 24px; }
+.third .cap { height: 24px; font-size: 16px; font-weight: 700; color: var(--ink-500); text-align: center; }
+
+/* Слайды и полоса вызова */
+.dots { display: flex; gap: 6px; }
+.dots i { width: 32px; height: 5px; border-radius: 3px; background: var(--line); }
+.dots i.on { background: var(--red-600); }
+.tabs { display: flex; gap: 24px; font-size: var(--t-s); color: var(--ink-500); }
+.tabs span { padding-bottom: 6px; border-bottom: 4px solid transparent; }
+.tabs span.on { color: var(--ink-900); font-weight: 700; border-color: var(--red-600); }
+.strip { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 20px; padding: 10px 16px; font-size: var(--t-s); }
+.strip .lab { font-weight: 700; color: var(--warn-text); }
+.strip .calls { display: flex; gap: 28px; white-space: nowrap; overflow: hidden; }
+.strip .calls b { font-family: var(--mono); background: var(--warn); color: #fff; border-radius: 6px; padding: 0 10px; margin-right: 8px; }
+
+/* Итоги */
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+.pd { display: grid; grid-template-columns: 72px minmax(0,1fr) auto; align-items: center; gap: 16px; padding: 12px 20px; border-top-width: 6px; }
+.pd .pn { font-family: var(--mono); font-weight: 700; font-size: 56px; line-height: 1; text-align: center; }
+.pd .who { font-size: var(--t-l); font-weight: 700; line-height: 1.15; }
+.pd .rt { text-align: right; font-family: var(--mono); font-size: var(--t-s); color: var(--ink-700); }
+.pd .rt b { display: block; font-size: var(--t-m); }
+.places { display: grid; gap: 0 24px; grid-auto-flow: column; }
+.pl { display: grid; grid-template-columns: 72px minmax(0,1fr) 72px 104px; align-items: center; gap: 12px; padding: 0 12px; height: 44px; border-bottom: 1px solid var(--line); font-size: var(--t-s); }
+.pl .p { font-family: var(--mono); font-weight: 700; text-align: center; color: var(--ink-700); }
+.pl .nm { white-space: nowrap; overflow: hidden; }
+.pl .ra { font-family: var(--mono); text-align: right; color: var(--ink-700); }
+.pl .de { font-family: var(--mono); text-align: right; font-weight: 700; }
+.up { color: var(--ok-text); } .down { color: var(--red-700); } .zero { color: var(--ink-500); }
+.plhead { font-size: 14px; color: var(--ink-500); height: 28px; border-bottom: 1px solid var(--line-strong); }
+.plhead .p, .plhead .ra, .plhead .de { font-family: inherit; font-weight: 500; }
+.note { font-size: var(--t-xs); color: var(--ink-500); }
+.lbl-v { position: absolute; right: 32px; bottom: 6px; font-size: 13px; color: var(--ink-400); }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+const Q = new URLSearchParams(location.search);
+document.write(`<script src="fx-${Q.get('fx') ?? 'groups8'}.js"><\/script>`);
+</script>
+<script src="proto.js"></script>
+</body>
+</html>
