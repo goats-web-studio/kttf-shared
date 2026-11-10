@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { authSessionSchema, loginSchema, signUpSchema } from './auth.js';
+import {
+  authSessionSchema,
+  LOGIN_PATTERN,
+  loginSchema,
+  PHONE_PATTERN,
+  signUpSchema,
+} from './auth.js';
 
 const USER = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -17,20 +23,35 @@ const USER = {
 };
 
 describe('телефон', () => {
-  it('принимается только формат +7XXXXXXXXXX', () => {
+  it('принимается только E.164 — плюс, код страны и цифры', () => {
     // ТЗ 2.1: «один телефон = один аккаунт». Разные написания одного номера
-    // означают два аккаунта у одного человека.
-    expect(
-      signUpSchema.safeParse({ login: 'aslan', password: 'parol123', phone: '+77011234567' })
-        .success,
-    ).toBe(true);
+    // означают два аккаунта у одного человека, поэтому формат один.
+    for (const phone of ['+77011234567', '+998901234567', '+821012345678', '+12025550123']) {
+      expect(
+        signUpSchema.safeParse({ login: 'aslan', password: 'parol123', phone }).success,
+        phone,
+      ).toBe(true);
+    }
 
-    for (const phone of ['87011234567', '+7 701 123 45 67', '+7701123456', '+770112345678']) {
+    for (const phone of [
+      '87011234567',
+      '+7 701 123 45 67',
+      '+7(701)1234567',
+      '+0123456789',
+      '+12345',
+      '+1234567890123456',
+    ]) {
       expect(
         signUpSchema.safeParse({ login: 'aslan', password: 'parol123', phone }).success,
         phone,
       ).toBe(false);
     }
+  });
+
+  it('логин и телефон не путаются при входе одним полем', () => {
+    // Логин не начинается с «+» — `identifier` разбирается однозначно.
+    expect(PHONE_PATTERN.test('aslan')).toBe(false);
+    expect(LOGIN_PATTERN.test('+77011234567')).toBe(false);
   });
 });
 
