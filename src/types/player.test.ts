@@ -323,14 +323,18 @@ describe('список игроков — ADR-054', () => {
   });
 });
 
-describe('стартовый рейтинг от организатора — ADR-062', () => {
-  it('кратен 25 и лежит в пределах 100–1000', () => {
+describe('стартовый рейтинг от организатора — ADR-062, ADR-085', () => {
+  it('точное число до сотых в пределах 1–3000', () => {
     expect(createPlayerSchema.safeParse({ ...valid, startRating: 400 }).success).toBe(true);
-    expect(createPlayerSchema.safeParse({ ...valid, startRating: 100 }).success).toBe(true);
-    expect(createPlayerSchema.safeParse({ ...valid, startRating: 1000 }).success).toBe(true);
-    expect(createPlayerSchema.safeParse({ ...valid, startRating: 410 }).success).toBe(false);
-    expect(createPlayerSchema.safeParse({ ...valid, startRating: 75 }).success).toBe(false);
-    expect(createPlayerSchema.safeParse({ ...valid, startRating: 1025 }).success).toBe(false);
+    // Точное число до сотых — ADR-085: шаг 25 снят.
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 410 }).success).toBe(true);
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 384.1 }).success).toBe(true);
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 365.14 }).success).toBe(true);
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 1 }).success).toBe(true);
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 3000 }).success).toBe(true);
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 365.145 }).success).toBe(false);
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 0 }).success).toBe(false);
+    expect(createPlayerSchema.safeParse({ ...valid, startRating: 3001 }).success).toBe(false);
   });
 
   it('не обязателен: свой профиль начинается с 250', () => {
@@ -343,7 +347,10 @@ describe('игровой профиль — ADR-072', () => {
 
   it('подтверждение — от имени клуба и с оценкой по сетке стартового рейтинга', () => {
     expect(confirmPlayerSchema.safeParse({ clubId: club, startRating: 325 }).success).toBe(true);
-    expect(confirmPlayerSchema.safeParse({ clubId: club, startRating: 330 }).success).toBe(false);
+    expect(confirmPlayerSchema.safeParse({ clubId: club, startRating: 330 }).success).toBe(true);
+    expect(confirmPlayerSchema.safeParse({ clubId: club, startRating: 330.555 }).success).toBe(
+      false,
+    );
     expect(confirmPlayerSchema.safeParse({ clubId: club }).success).toBe(false);
     expect(confirmPlayerSchema.safeParse({ startRating: 325 }).success).toBe(false);
   });
