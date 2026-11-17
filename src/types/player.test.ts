@@ -168,10 +168,34 @@ describe('игрок в ответе', () => {
       isProvisional: true,
       confirmed: true,
       createdAt: '2026-08-30T00:00:00.000Z',
+      deleted: false,
     };
 
     expect(playerViewSchema.parse(player)).toEqual(player);
     expect(playerViewSchema.safeParse({ ...player, rating: 250 }).success).toBe(false);
+  });
+
+  it('удалённый аккаунт помечен флагом, старый снимок без флага — живой игрок (ADR-092)', () => {
+    const player = {
+      id: PLAYER_ID,
+      userId: null,
+      lastName: '',
+      firstName: '',
+      middleName: null,
+      birthYear: 2001,
+      gender: 'MALE',
+      city: { id: '00000000-0000-4000-8000-0000000000c1', name: 'Алматы', nameKk: null },
+      photoUrl: null,
+      clubId: null,
+      rating: '250.00',
+      ratedMatches: 0,
+      isProvisional: true,
+      confirmed: true,
+      createdAt: '2026-08-30T00:00:00.000Z',
+    };
+
+    expect(playerViewSchema.parse(player).deleted).toBe(false);
+    expect(playerViewSchema.parse({ ...player, deleted: true }).deleted).toBe(true);
   });
 
   it('анкеты в кратком виде нет', () => {
@@ -199,6 +223,7 @@ describe('игрок в ответе', () => {
       isProvisional: true,
       confirmed: true,
       createdAt: '2026-08-30T00:00:00.000Z',
+      deleted: false,
       birthDate: '2001-04-12',
       playingHand: 'RIGHT',
       grip: 'SHAKEHAND',

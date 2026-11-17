@@ -215,6 +215,20 @@ export const ERROR_CODES = {
    * страница тренера есть у обоих.
    */
   PLAYER_CLAIM_INVALID: 'PLAYER_CLAIM_INVALID',
+
+  // ---------- аккаунт и персональные данные: ADR-092 ----------
+
+  /**
+   * Пароль не совпал при подтверждении необратимого действия — удаления
+   * аккаунта. Не `UNAUTHORIZED`: на 401 клиенты обновляют токен и повторяют.
+   */
+  WRONG_PASSWORD: 'WRONG_PASSWORD',
+  /**
+   * Аккаунт пока удалить нельзя. `details.reason`: `LAST_CLUB_OWNER` —
+   * единственный владелец клуба (`details.clubIds`), `LAST_ADMIN` — последний
+   * администратор платформы.
+   */
+  ACCOUNT_DELETE_BLOCKED: 'ACCOUNT_DELETE_BLOCKED',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

@@ -87,3 +87,12 @@ export const changePasswordSchema = z
     message: 'Новый пароль совпадает с текущим',
   });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+/**
+ * Удаление аккаунта — `POST /auth/delete-account`, ADR-092.
+ *
+ * Пароль — повторная проверка личности перед необратимым действием: открытая
+ * на чужом телефоне вкладка не должна стирать аккаунт одним нажатием.
+ */
+export const deleteAccountSchema = z.object({ password: z.string().min(1).max(200) });
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;

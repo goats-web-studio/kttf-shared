@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { changePasswordSchema, updateAccountSchema } from './account.js';
+import { changePasswordSchema, deleteAccountSchema, updateAccountSchema } from './account.js';
 
 describe('настройки аккаунта', () => {
   it('пустое тело отвергается', () => {
@@ -62,5 +62,13 @@ describe('смена пароля', () => {
       changePasswordSchema.safeParse({ currentPassword: 'samesame1', newPassword: 'othersame2' })
         .success,
     ).toBe(true);
+  });
+});
+
+describe('удаление аккаунта — ADR-092', () => {
+  it('без пароля не принимается', () => {
+    expect(deleteAccountSchema.safeParse({}).success).toBe(false);
+    expect(deleteAccountSchema.safeParse({ password: '' }).success).toBe(false);
+    expect(deleteAccountSchema.safeParse({ password: 'parol123' }).success).toBe(true);
   });
 });

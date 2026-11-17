@@ -338,6 +338,7 @@ describe('участник в ответе', () => {
         isProvisional: true,
         confirmed: true,
         createdAt: '2026-08-30T00:00:00.000Z',
+        deleted: false,
       },
     };
 

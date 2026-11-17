@@ -380,6 +380,12 @@ export const playerViewSchema = z.object({
    */
   confirmed: z.boolean(),
   createdAt: z.iso.datetime(),
+  /**
+   * Аккаунт удалён (ADR-092): имя пустое, клиент пишет «Удалённый игрок».
+   * Остаётся только спортивная история. Умолчание — для офлайн-снимков,
+   * снятых до появления поля.
+   */
+  deleted: z.boolean().default(false),
 });
 export type PlayerView = z.infer<typeof playerViewSchema>;
 
