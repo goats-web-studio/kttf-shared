@@ -85,6 +85,12 @@ export const signUpSchema = z.object({
   phone,
   /** Игрок, которым человек себя назвал. `undefined` — привязки нет. */
   playerId: z.uuid().optional(),
+  /**
+   * Согласие с пользовательским соглашением и политикой конфиденциальности —
+   * ADR-091. Без галочки регистрации нет. Редакцию документа клиент не шлёт:
+   * сервер записывает свою `PRIVACY_POLICY_VERSION`, ссылки всегда ведут на неё.
+   */
+  consent: z.literal(true),
 });
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
@@ -128,6 +134,13 @@ export const authUserViewSchema = z.object({
    * до появления поля: без него она не прошла бы схему и считалась испорченной.
    */
   coach: coachRefSchema.nullable().default(null),
+  /**
+   * Когда дано согласие на обработку персональных данных и с какой редакцией
+   * политики (ADR-091). `null` — аккаунт заведён до появления согласия.
+   * Умолчание — для записи о вошедшем на диске браузера, как у `coach`.
+   */
+  privacyConsentAt: z.iso.datetime().nullable().default(null),
+  privacyConsentVersion: z.string().nullable().default(null),
 });
 export type AuthUserView = z.infer<typeof authUserViewSchema>;
 

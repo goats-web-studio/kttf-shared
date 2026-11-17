@@ -20,6 +20,8 @@ const USER = {
   clubRoles: [{ clubId: '00000000-0000-4000-8000-000000000002', role: 'OWNER' }],
   isAdmin: false,
   coach: null,
+  privacyConsentAt: '2026-11-17T00:00:00.000Z',
+  privacyConsentVersion: '2026-11-17',
 };
 
 describe('телефон', () => {
@@ -28,7 +30,8 @@ describe('телефон', () => {
     // означают два аккаунта у одного человека, поэтому формат один.
     for (const phone of ['+77011234567', '+998901234567', '+821012345678', '+12025550123']) {
       expect(
-        signUpSchema.safeParse({ login: 'aslan', password: 'parol123', phone }).success,
+        signUpSchema.safeParse({ login: 'aslan', password: 'parol123', phone, consent: true })
+          .success,
         phone,
       ).toBe(true);
     }
@@ -42,7 +45,8 @@ describe('телефон', () => {
       '+1234567890123456',
     ]) {
       expect(
-        signUpSchema.safeParse({ login: 'aslan', password: 'parol123', phone }).success,
+        signUpSchema.safeParse({ login: 'aslan', password: 'parol123', phone, consent: true })
+          .success,
         phone,
       ).toBe(false);
     }
@@ -62,6 +66,7 @@ describe('логин', () => {
         login,
         password: 'parol123',
         phone: '+77011234567',
+        consent: true,
       }).success;
 
       // Кириллица и пробел отвергаются: их не видно глазами при вводе.
@@ -121,5 +126,26 @@ describe('ответ входа', () => {
         user: { ...USER, login: null },
       }).success,
     ).toBe(true);
+  });
+});
+
+describe('согласие при регистрации — ADR-091', () => {
+  const base = { login: 'aslan', password: 'parol123', phone: '+77011234567' };
+
+  it('без галочки регистрации нет', () => {
+    expect(signUpSchema.safeParse(base).success).toBe(false);
+    expect(signUpSchema.safeParse({ ...base, consent: false }).success).toBe(false);
+    expect(signUpSchema.safeParse({ ...base, consent: 'true' }).success).toBe(false);
+    expect(signUpSchema.safeParse({ ...base, consent: true }).success).toBe(true);
+  });
+
+  it('запись о вошедшем без полей согласия разбирается с пустыми значениями', () => {
+    const old: Record<string, unknown> = { ...USER };
+    delete old.privacyConsentAt;
+    delete old.privacyConsentVersion;
+    const user = authSessionSchema.parse({ accessToken: 'a', refreshToken: 'r', user: old }).user;
+
+    expect(user.privacyConsentAt).toBeNull();
+    expect(user.privacyConsentVersion).toBeNull();
   });
 });
