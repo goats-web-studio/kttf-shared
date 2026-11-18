@@ -512,9 +512,12 @@ API целиком: `cd kttf-back && pnpm build && pnpm start`, дальше `cu
 **Курс на пилот — 14.11.2026 (ADR-083).** Этот блок важнее всех ниже: остальные пункты раздела идут после него или параллельно, если не мешают.
 
 1. **Хостинг и домен.** Стек `kttf-infra` в прод: персональные данные граждан РК хранятся в РК (ТС 10). Перед выкладкой — CI во всех репозиториях, рабочие метрики, HSTS и уязвимости фронта (раздел 8)
-   - **CI/CD готов (18.11.2026), сервера ещё нет.** Push в `main` kttf-back и kttf-front → проверки → образы `kttf-api`, `kttf-migrate`, `kttf-web` в GHCR (`sha-…` и `main`) → выкладка через `kttf-infra/.github/workflows/deploy.yml` (пропускается, пока нет секрета `DEPLOY_HOST`). Подключение сервера — `kttf-infra/DEPLOY.md`: `deploy/bootstrap.sh`, четыре секрета, пакеты GHCR сделать публичными. Требования — `kttf-infra/SERVER-REQUIREMENTS.md` (4 ГБ, 2–4 vCPU, NVMe, РК). Серверы 77.240.39.53 (denis-shutov.com) и global-exports не подходят: 1–2 ГБ памяти и чужие проды
-   - Домен kttf.kz: NS у PS.kz, A-записей пока нет — добавить на IP нового сервера
-   - Перед выкладкой ADR-091/092: запушить kttf-shared и поднять SHA-пин в kttf-back и kttf-front; накатить миграцию `20261117100000_privacy_consent_account_deletion`
+   - **Прод работает с 18.11.2026: https://kttf.kz.** VPS PS.kz 87.199.131.254 (Ubuntu 24.04, 2 vCPU, 2 ГБ + swap 3 ГБ, 40 ГБ), подготовлен `kttf-infra/deploy/bootstrap.sh`; SSH только по ключу, root закрыт. Сертификат Let's Encrypt Caddy получает и продлевает сам, HSTS включён. База чистая, демо-данных нет
+   - **CI/CD:** push в `main` kttf-back или kttf-front → проверки → образы в GHCR → выкладка по SSH пользователем `deploy` с проверкой здоровья и откатом. Проверено перезапуском CI фронта. Пакеты GHCR приватные: сервер тянет их токеном `read:packages` (`GHCR_USER`/`GHCR_TOKEN` в `.env` сервера). Ручная выкладка и откат — Actions → Deploy в kttf-infra (`kttf-infra/DEPLOY.md`)
+   - **Мониторинг выключен** (`COMPOSE_PROFILES=` в `.env`): на 2 ГБ Prometheus и Grafana не помещаются. Включить при переезде на 4 ГБ (`SERVER-REQUIREMENTS.md`)
+   - Ночной бэкап 03:30 в `/opt/kttf/backups` на том же диске — **нужна копия вне сервера** (`BACKUP_RSYNC_TARGET` или снимки VPS в панели PS.kz)
+   - Администратор не назначен: зарегистрироваться на сайте, затем `UPDATE "User" SET "isAdmin" = true` (`DEPLOY.md`, шаг 6)
+   - Репозитории kttf-back, kttf-front, kttf-infra, kttf-shared публичные — закрыть ли, решают владельцы
    - Открыть ИП — поменять только `kttf-front/src/features/legal/operator.ts`; показать тексты юристу РК
    - Мобилка: экран удаления аккаунта (требование сторов) — коды ошибок уже в Dart
 2. **Первый живой турнир в КНТ Winners.** Он же — полевое испытание офлайна (спринт 4) и этапов A и B турнирного менеджера. После турнира чиним только то, что сломалось в зале
