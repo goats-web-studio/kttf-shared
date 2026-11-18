@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   createCitySchema,
   createCountrySchema,
+  distanceKm,
+  nearestCity,
   updateCitySchema,
   updateCountrySchema,
 } from './place.js';
@@ -58,5 +60,36 @@ describe('город', () => {
   it('скрыть можно, удалить через правку нельзя', () => {
     expect(updateCitySchema.safeParse({ isActive: false }).success).toBe(true);
     expect(updateCitySchema.safeParse({ name: null }).success).toBe(false);
+  });
+});
+
+describe('ближайший город — ADR-093', () => {
+  const almaty = { id: 'a', lat: 43.2389, lng: 76.8897 };
+  const astana = { id: 'b', lat: 51.1694, lng: 71.4491 };
+  const noCoords = { id: 'c', lat: null, lng: null };
+
+  it('Алматы — Астана около 970 км', () => {
+    expect(Math.round(distanceKm(almaty, astana) / 10)).toBe(97);
+  });
+
+  it('точка в пригороде достаётся своему городу', () => {
+    // Каскелен — 25 км от центра Алматы.
+    expect(nearestCity([astana, noCoords, almaty], { lat: 43.2, lng: 76.62 })?.id).toBe('a');
+  });
+
+  it('дальше 150 км — города нет', () => {
+    // Бишкек: до Алматы около 200 км.
+    expect(nearestCity([almaty, astana], { lat: 42.87, lng: 74.59 })).toBeUndefined();
+  });
+
+  it('без координат сравнивать не с чем', () => {
+    expect(nearestCity([noCoords], { lat: 43.2, lng: 76.9 })).toBeUndefined();
+  });
+
+  it('координаты города — в пределах шара', () => {
+    expect(createCitySchema.safeParse({ countryId: COUNTRY_ID, name: 'X', lat: 91 }).success).toBe(
+      false,
+    );
+    expect(updateCitySchema.safeParse({ lat: null, lng: null }).success).toBe(true);
   });
 });

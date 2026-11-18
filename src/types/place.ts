@@ -48,6 +48,13 @@ export const cityViewSchema = z.object({
   nameKk: z.string().nullable(),
   sortOrder: z.number().int(),
   isActive: z.boolean(),
+  /**
+   * Центр города — ADR-093. По нему браузер находит ближайший к человеку
+   * город. `null` — координаты не заведены, город в автоопределении
+   * не участвует, но выбрать его руками можно.
+   */
+  lat: z.number().nullable(),
+  lng: z.number().nullable(),
 });
 export type CityView = z.infer<typeof cityViewSchema>;
 
@@ -81,11 +88,16 @@ export const updateCountrySchema = createCountrySchema
   .refine((value) => Object.keys(value).length > 0, { message: 'Нужно указать хотя бы одно поле' });
 export type UpdateCountryInput = z.infer<typeof updateCountrySchema>;
 
+const latitude = z.number().min(-90).max(90);
+const longitude = z.number().min(-180).max(180);
+
 export const createCitySchema = z.object({
   countryId: z.uuid(),
   name: placeName,
   nameKk: placeName.optional(),
   sortOrder: sortOrder.optional(),
+  lat: latitude.optional(),
+  lng: longitude.optional(),
 });
 export type CreateCityInput = z.infer<typeof createCitySchema>;
 
@@ -96,7 +108,59 @@ export type CreateCityInput = z.infer<typeof createCitySchema>;
  */
 export const updateCitySchema = createCitySchema
   .omit({ countryId: true })
-  .extend({ nameKk: placeName.nullable(), isActive: z.boolean() })
+  .extend({
+    nameKk: placeName.nullable(),
+    isActive: z.boolean(),
+    lat: latitude.nullable(),
+    lng: longitude.nullable(),
+  })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { message: 'Нужно указать хотя бы одно поле' });
 export type UpdateCityInput = z.infer<typeof updateCitySchema>;
+
+/**
+ * Дальше этого от центра ближайшего города человек считается «не у нас» —
+ * ADR-093. 150 км покрывают пригороды и область вокруг областного центра,
+ * но не ставят Алматы человеку из Бишкека.
+ */
+export const NEAREST_CITY_MAX_KM = 150;
+
+const EARTH_RADIUS_KM = 6371;
+
+/** Расстояние по дуге большого круга, км. */
+export function distanceKm(
+  from: { readonly lat: number; readonly lng: number },
+  to: { readonly lat: number; readonly lng: number },
+): number {
+  const rad = (degrees: number): number => (degrees * Math.PI) / 180;
+  const dLat = rad(to.lat - from.lat);
+  const dLng = rad(to.lng - from.lng);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(from.lat)) * Math.cos(rad(to.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/**
+ * Ближайший к точке город справочника — ADR-093.
+ *
+ * Города без координат пропускаются. `undefined` — ближайший дальше
+ * `maxKm` или сравнивать не с чем: человеку предлагают выбрать самому.
+ */
+export function nearestCity<T extends Pick<CityView, 'lat' | 'lng'>>(
+  cities: readonly T[],
+  point: { readonly lat: number; readonly lng: number },
+  maxKm: number = NEAREST_CITY_MAX_KM,
+): T | undefined {
+  let best: T | undefined;
+  let bestKm = Number.POSITIVE_INFINITY;
+  for (const city of cities) {
+    if (city.lat === null || city.lng === null) continue;
+    const km = distanceKm(point, { lat: city.lat, lng: city.lng });
+    if (km < bestKm) {
+      best = city;
+      bestKm = km;
+    }
+  }
+  return bestKm <= maxKm ? best : undefined;
+}

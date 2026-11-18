@@ -61,6 +61,11 @@ export const updateAccountSchema = z
     email: z.email().max(200).nullable(),
     locale: localeSchema,
     telegramId: telegramId.nullable(),
+    /**
+     * Мой город — ADR-093. По нему сайт сразу показывает турниры, клубы,
+     * тренировки и игроков рядом. `null` — город не выбран, видно всё.
+     */
+    cityId: z.uuid().nullable(),
   })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { message: 'Нужно указать хотя бы одно поле' });

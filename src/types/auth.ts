@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { coachRefSchema } from './coach.js';
+import { cityRefSchema } from './place.js';
 
 /**
  * Контракт аутентификации — ТС 7.1.
@@ -91,6 +92,12 @@ export const signUpSchema = z.object({
    * сервер записывает свою `PRIVACY_POLICY_VERSION`, ссылки всегда ведут на неё.
    */
   consent: z.literal(true),
+  /**
+   * Город, который сайт уже показывал гостю, — ADR-093: выбранный в шапке
+   * или определённый по местоположению. Переезжает в аккаунт, чтобы после
+   * регистрации не спрашивать второй раз.
+   */
+  cityId: z.uuid().optional(),
 });
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
@@ -141,6 +148,11 @@ export const authUserViewSchema = z.object({
    */
   privacyConsentAt: z.iso.datetime().nullable().default(null),
   privacyConsentVersion: z.string().nullable().default(null),
+  /**
+   * Мой город — ADR-093. `null` — не выбран, сайт показывает все города.
+   * Умолчание — для записи о вошедшем на диске браузера, как у `coach`.
+   */
+  city: cityRefSchema.nullable().default(null),
 });
 export type AuthUserView = z.infer<typeof authUserViewSchema>;
 
