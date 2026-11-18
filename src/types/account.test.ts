@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { changePasswordSchema, deleteAccountSchema, updateAccountSchema } from './account.js';
+import {
+  changePasswordSchema,
+  requestAccountDeletionSchema,
+  requestAccountRestoreSchema,
+  updateAccountSchema,
+} from './account.js';
 
 describe('настройки аккаунта', () => {
   it('пустое тело отвергается', () => {
@@ -67,8 +72,18 @@ describe('смена пароля', () => {
 
 describe('удаление аккаунта — ADR-092', () => {
   it('без пароля не принимается', () => {
-    expect(deleteAccountSchema.safeParse({}).success).toBe(false);
-    expect(deleteAccountSchema.safeParse({ password: '' }).success).toBe(false);
-    expect(deleteAccountSchema.safeParse({ password: 'parol123' }).success).toBe(true);
+    expect(requestAccountDeletionSchema.safeParse({}).success).toBe(false);
+    expect(requestAccountDeletionSchema.safeParse({ password: '' }).success).toBe(false);
+    expect(requestAccountDeletionSchema.safeParse({ password: 'parol123' }).success).toBe(true);
+    expect(
+      requestAccountDeletionSchema.safeParse({ password: 'parol123', reason: 'переезжаю' }).success,
+    ).toBe(true);
+  });
+
+  it('восстановление без имени не принимается — ADR-095', () => {
+    expect(requestAccountRestoreSchema.safeParse({ lastName: 'Ким' }).success).toBe(false);
+    expect(
+      requestAccountRestoreSchema.safeParse({ lastName: 'Ким', firstName: 'Сергей' }).success,
+    ).toBe(true);
   });
 });

@@ -8,7 +8,7 @@
  */
 
 /** Редакция документов: дата публикации ГГГГ-ММ-ДД. */
-export const PRIVACY_POLICY_VERSION = '2026-11-17';
+export const PRIVACY_POLICY_VERSION = '2026-11-18';
 
 export const LEGAL_DOCUMENTS = ['privacy', 'terms'] as const;
 export type LegalDocument = (typeof LEGAL_DOCUMENTS)[number];

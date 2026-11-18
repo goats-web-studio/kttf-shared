@@ -229,6 +229,17 @@ export const ERROR_CODES = {
    * администратор платформы.
    */
   ACCOUNT_DELETE_BLOCKED: 'ACCOUNT_DELETE_BLOCKED',
+  /**
+   * Заявка того же вида уже ждёт решения — ADR-095. Вторая не заводится.
+   */
+  ACCOUNT_REQUEST_PENDING: 'ACCOUNT_REQUEST_PENDING',
+  /**
+   * Восстанавливать нечего или некуда — ADR-095. `details.reason`:
+   * `NOTHING_ARCHIVED` — по телефону архива нет, `HAS_PROFILE` — у аккаунта
+   * уже есть подтверждённый профиль игрока, `PROFILE_TAKEN` — архивный
+   * профиль уже вернули другому аккаунту.
+   */
+  ACCOUNT_RESTORE_INVALID: 'ACCOUNT_RESTORE_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

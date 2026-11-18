@@ -89,10 +89,100 @@ export const changePasswordSchema = z
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 /**
- * Удаление аккаунта — `POST /auth/delete-account`, ADR-092.
+ * Заявка на удаление аккаунта — `POST /account/deletion-request`, ADR-095.
  *
- * Пароль — повторная проверка личности перед необратимым действием: открытая
- * на чужом телефоне вкладка не должна стирать аккаунт одним нажатием.
+ * Сам человек аккаунт не удаляет: он просит, решает администратор. Пароль —
+ * повторная проверка личности: открытая на чужом телефоне вкладка не должна
+ * отправлять заявку одним нажатием. Причина — по желанию, для администратора.
  */
-export const deleteAccountSchema = z.object({ password: z.string().min(1).max(200) });
-export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
+export const requestAccountDeletionSchema = z.object({
+  password: z.string().min(1).max(200),
+  reason: z.string().trim().max(500).optional(),
+});
+export type RequestAccountDeletionInput = z.infer<typeof requestAccountDeletionSchema>;
+
+/**
+ * Заявка на восстановление архивного профиля — `POST /account/restore-request`,
+ * ADR-095.
+ *
+ * По номеру телефона нового аккаунта нашёлся профиль, ушедший в архив. Номер
+ * без SMS не подтверждён (ADR-034), поэтому историю не привязывают сами:
+ * решает администратор. Имя нужно, когда личные данные архива уже стёрты
+ * (через 30 дней): иначе профиль вернулся бы безымянным.
+ */
+export const requestAccountRestoreSchema = z.object({
+  lastName: z.string().trim().min(1).max(100),
+  firstName: z.string().trim().min(1).max(100),
+  comment: z.string().trim().max(500).optional(),
+});
+export type RequestAccountRestoreInput = z.infer<typeof requestAccountRestoreSchema>;
+
+export const ACCOUNT_REQUEST_KINDS = ['DELETE', 'RESTORE'] as const;
+export const accountRequestKindSchema = z.enum(ACCOUNT_REQUEST_KINDS);
+export type AccountRequestKind = z.infer<typeof accountRequestKindSchema>;
+
+export const ACCOUNT_REQUEST_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const;
+export const accountRequestStatusSchema = z.enum(ACCOUNT_REQUEST_STATUSES);
+export type AccountRequestStatus = z.infer<typeof accountRequestStatusSchema>;
+
+/** Своя заявка — для настроек и кабинета. */
+export const accountRequestViewSchema = z.object({
+  id: z.uuid(),
+  kind: accountRequestKindSchema,
+  status: accountRequestStatusSchema,
+  createdAt: z.iso.datetime(),
+  decidedAt: z.iso.datetime().nullable(),
+  /** Ответ администратора при отказе. */
+  answer: z.string().nullable(),
+});
+export type AccountRequestView = z.infer<typeof accountRequestViewSchema>;
+
+/**
+ * Что знает о себе вошедший — `GET /account/requests`, ADR-095.
+ *
+ * `restorable` — по телефону аккаунта есть профиль в архиве, и восстановить
+ * его можно заявкой. `restorableWithData` — личные данные архива ещё не
+ * стёрты (первые 30 дней): вернутся имя и фото, а не только история.
+ */
+export const accountStatusViewSchema = z.object({
+  deletion: accountRequestViewSchema.nullable(),
+  restore: accountRequestViewSchema.nullable(),
+  restorable: z.boolean(),
+  restorableWithData: z.boolean(),
+});
+export type AccountStatusView = z.infer<typeof accountStatusViewSchema>;
+
+/** Заявка в списке администратора. */
+export const adminAccountRequestViewSchema = accountRequestViewSchema.extend({
+  reason: z.string().nullable(),
+  /** Аккаунт — пока он есть. После архива заявки на удаление — `null`. */
+  user: z.object({ id: z.uuid(), login: z.string().nullable(), phone: z.string() }).nullable(),
+  /** Профиль игрока: у удаления — свой, у восстановления — архивный. */
+  player: z
+    .object({
+      id: z.uuid(),
+      lastName: z.string(),
+      firstName: z.string(),
+      birthYear: z.number().int(),
+      rating: z.string(),
+      tournaments: z.number().int().nonnegative(),
+    })
+    .nullable(),
+  /** Имя, которое назвал просящий восстановление. */
+  claimedName: z.string().nullable(),
+});
+export type AdminAccountRequestView = z.infer<typeof adminAccountRequestViewSchema>;
+
+export const listAccountRequestsSchema = z.object({
+  status: accountRequestStatusSchema.optional(),
+});
+export type ListAccountRequestsQuery = z.infer<typeof listAccountRequestsSchema>;
+
+/** Отказ — с ответом человеку: он увидит его в настройках. */
+export const rejectAccountRequestSchema = z.object({
+  answer: z.string().trim().min(1).max(500),
+});
+export type RejectAccountRequestInput = z.infer<typeof rejectAccountRequestSchema>;
+
+/** Сколько архив хранит личные данные, прежде чем их стереть — ADR-095. */
+export const ARCHIVE_PERSONAL_DATA_DAYS = 30;
