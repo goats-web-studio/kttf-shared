@@ -350,5 +350,12 @@ export const tournamentListItemSchema = tournamentViewSchema.extend({
   averageRating: z.number().int().nonnegative().nullable(),
   /** Сыгранные встречи: у будущего турнира ноль. */
   matchesPlayed: z.number().int().nonnegative(),
+  /**
+   * Средний возраст участников на год турнира, до целого — ADR-094: рядом
+   * со средним рейтингом видно, детский это турнир, ветеранский или общий.
+   * Считается по году рождения, как допуск в категорию. `null` — участников
+   * нет. Умолчание — для ответов сервера до появления поля.
+   */
+  averageAge: z.number().int().nonnegative().nullable().default(null),
 });
 export type TournamentListItemView = z.infer<typeof tournamentListItemSchema>;
