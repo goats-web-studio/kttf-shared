@@ -22,6 +22,7 @@ const USER = {
   coach: null,
   privacyConsentAt: '2026-11-17T00:00:00.000Z',
   privacyConsentVersion: '2026-11-17',
+  city: { id: '00000000-0000-4000-8000-0000000000c1', name: 'Алматы', nameKk: null },
 };
 
 describe('телефон', () => {
