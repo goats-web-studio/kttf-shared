@@ -512,7 +512,8 @@ API целиком: `cd kttf-back && pnpm build && pnpm start`, дальше `cu
 **Курс на пилот — 14.11.2026 (ADR-083).** Этот блок важнее всех ниже: остальные пункты раздела идут после него или параллельно, если не мешают.
 
 1. **Хостинг и домен.** Стек `kttf-infra` в прод: персональные данные граждан РК хранятся в РК (ТС 10). Перед выкладкой — CI во всех репозиториях, рабочие метрики, HSTS и уязвимости фронта (раздел 8)
-   - Домен kttf.kz и сервер PS.kz — на разных аккаунтах: A-записи домена на IP сервера, `KTTF_DOMAIN=kttf.kz` в `.env` стека
+   - **CI/CD готов (18.11.2026), сервера ещё нет.** Push в `main` kttf-back и kttf-front → проверки → образы `kttf-api`, `kttf-migrate`, `kttf-web` в GHCR (`sha-…` и `main`) → выкладка через `kttf-infra/.github/workflows/deploy.yml` (пропускается, пока нет секрета `DEPLOY_HOST`). Подключение сервера — `kttf-infra/DEPLOY.md`: `deploy/bootstrap.sh`, четыре секрета, пакеты GHCR сделать публичными. Требования — `kttf-infra/SERVER-REQUIREMENTS.md` (4 ГБ, 2–4 vCPU, NVMe, РК). Серверы 77.240.39.53 (denis-shutov.com) и global-exports не подходят: 1–2 ГБ памяти и чужие проды
+   - Домен kttf.kz: NS у PS.kz, A-записей пока нет — добавить на IP нового сервера
    - Перед выкладкой ADR-091/092: запушить kttf-shared и поднять SHA-пин в kttf-back и kttf-front; накатить миграцию `20261117100000_privacy_consent_account_deletion`
    - Открыть ИП — поменять только `kttf-front/src/features/legal/operator.ts`; показать тексты юристу РК
    - Мобилка: экран удаления аккаунта (требование сторов) — коды ошибок уже в Dart
