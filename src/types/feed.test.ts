@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { feedCurationSchema, feedItemSchema, feedQuerySchema, FEED_PAGE_MAX } from './feed.js';
+import { FEED_PAGE_MAX, feedCurationSchema, feedItemSchema, feedQuerySchema } from './feed.js';
 import { followParamsSchema, followSuggestionsQuerySchema } from './follow.js';
 
 const ID = '00000000-0000-4000-8000-000000000001';
@@ -71,5 +71,40 @@ describe('управление лентой — ADR-075', () => {
       true,
     );
     expect(feedCurationSchema.safeParse({ itemId: 'club-post:1' }).success).toBe(false);
+  });
+});
+
+describe('страница «Лента» — ADR-097', () => {
+  it('фильтр необязателен и принимает только известные значения', () => {
+    expect(feedQuerySchema.parse({}).filter).toBeUndefined();
+    expect(feedQuerySchema.parse({ filter: 'FORUM', tab: 'FOR_YOU' })).toMatchObject({
+      filter: 'FORUM',
+      tab: 'FOR_YOU',
+    });
+    expect(feedQuerySchema.safeParse({ filter: 'NEWS' }).success).toBe(false);
+  });
+
+  it('карточка темы форума — раздел, заголовок, обсуждение', () => {
+    const item = {
+      id: 'forum:00000000-0000-4000-8000-000000000001',
+      at: '2026-11-19T10:00:00.000Z',
+      source: { kind: 'PLAYER', id: null, name: 'Игрок', imageUrl: null, slug: null },
+      discussion: {
+        topicId: '00000000-0000-4000-8000-000000000001',
+        postId: null,
+        comments: 3,
+        likes: 1,
+        views: 10,
+      },
+      pinned: false,
+      hidden: false,
+      type: 'FORUM',
+      section: { slug: 'inventory', title: 'Инвентарь' },
+      title: 'Какую накладку взять',
+      excerpt: 'Подскажите…',
+      isNew: true,
+    };
+    expect(feedItemSchema.safeParse(item).success).toBe(true);
+    expect(feedItemSchema.safeParse({ ...item, section: undefined }).success).toBe(false);
   });
 });

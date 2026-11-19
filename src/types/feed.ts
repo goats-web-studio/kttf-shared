@@ -34,8 +34,25 @@ export const FEED_EXCERPT_MAX = 400;
 
 export const FEED_PAGE_MAX = 30;
 
+/**
+ * Что показывать — фильтр страницы «Лента» (ADR-097). Без фильтра — всё.
+ * `TOURNAMENTS` — объявленные турниры, итоги и события игроков на турнирах;
+ * `FORUM` — темы разделов форума, кроме новостей KTTF и записей игроков.
+ */
+export const FEED_FILTERS = [
+  'KTTF',
+  'CLUBS',
+  'COACHES',
+  'PLAYERS',
+  'TOURNAMENTS',
+  'FORUM',
+] as const;
+export const feedFilterSchema = z.enum(FEED_FILTERS);
+export type FeedFilter = z.infer<typeof feedFilterSchema>;
+
 export const feedQuerySchema = z.object({
   tab: feedTabSchema.default('ALL'),
+  filter: feedFilterSchema.optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(FEED_PAGE_MAX).default(10),
 });
@@ -101,6 +118,22 @@ export const feedTopicItemSchema = z.object({
   archived: z.boolean(),
 });
 
+/**
+ * Тема форума — ADR-097: новая тема или живое обсуждение любого раздела,
+ * кроме новостей KTTF и записей игроков (у тех свои карточки). `at` —
+ * время последнего сообщения: тема поднимается, когда в ней отвечают.
+ * Источник — автор темы (`PLAYER`), без профиля игрока — `KTTF` с его именем.
+ */
+export const feedForumItemSchema = z.object({
+  ...base,
+  type: z.literal('FORUM'),
+  section: z.object({ slug: z.string(), title: z.string() }),
+  title: z.string(),
+  excerpt: z.string(),
+  /** Создана в окне ленты — «Новая тема», иначе «Обсуждают». */
+  isNew: z.boolean(),
+});
+
 /** Объявлен турнир — запись открыта или скоро. */
 export const feedTournamentItemSchema = z.object({
   ...base,
@@ -146,6 +179,7 @@ export const feedAchievementItemSchema = z.object({
 export const feedItemSchema = z.union([
   feedPostItemSchema,
   feedTopicItemSchema,
+  feedForumItemSchema,
   feedTournamentItemSchema,
   feedResultItemSchema,
   feedAchievementItemSchema,
@@ -153,12 +187,14 @@ export const feedItemSchema = z.union([
 export type FeedItem = z.infer<typeof feedItemSchema>;
 export type FeedPostItem = z.infer<typeof feedPostItemSchema>;
 export type FeedTopicItem = z.infer<typeof feedTopicItemSchema>;
+export type FeedForumItem = z.infer<typeof feedForumItemSchema>;
 export type FeedTournamentItem = z.infer<typeof feedTournamentItemSchema>;
 export type FeedResultItem = z.infer<typeof feedResultItemSchema>;
 export type FeedAchievementItem = z.infer<typeof feedAchievementItemSchema>;
 
 export const feedPageSchema = z.object({
   tab: feedTabSchema,
+  filter: feedFilterSchema.nullable(),
   items: z.array(feedItemSchema),
   total: z.number().int().nonnegative(),
   page: z.number().int().positive(),
