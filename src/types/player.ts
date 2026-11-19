@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { productListItemViewSchema } from './catalog.js';
 import { coachTenureViewSchema } from './coach-students.js';
 import { pageQuerySchema } from './pagination.js';
-import { cityRefSchema } from './place.js';
+import { cityIdListSchema, cityRefSchema } from './place.js';
 
 /**
  * Контракт игроков — ТС 7.2.
@@ -286,11 +286,7 @@ export const listPlayersSchema = pageQuerySchema.extend({
    * Город или несколько через запятую — ADR-054, как у RTTF «регион / город»
    * с плюсом. Один город — частный случай списка.
    */
-  cityId: z
-    .string()
-    .transform((value) => value.split(',').map((part) => part.trim()))
-    .pipe(z.array(z.uuid()).min(1).max(20))
-    .optional(),
+  cityId: cityIdListSchema.optional(),
   clubId: z.uuid().optional(),
   /**
    * Рейтинг «от» и «до» включительно — по тому числу, что видно на экране:

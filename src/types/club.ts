@@ -5,7 +5,7 @@ import { clubHoursIntervalSchema } from './club-hours.js';
 import { clubPriceViewSchema } from './club-page.js';
 import { CLUB_IMAGE_PATH_PATTERN } from './media.js';
 import { pageQuerySchema } from './pagination.js';
-import { cityRefSchema } from './place.js';
+import { cityIdListSchema, cityRefSchema } from './place.js';
 
 /**
  * Контракт клубов — ТС 7.4.
@@ -134,7 +134,7 @@ const commaSeparated = z.string().transform((value) => value.split(',').map((par
 
 export const listClubsSchema = pageQuerySchema.extend({
   /** Город или несколько через запятую. */
-  cityId: commaSeparated.pipe(z.array(z.uuid()).min(1).max(20)).optional(),
+  cityId: cityIdListSchema.optional(),
   search: z.string().trim().min(1).max(100).optional(),
   /** Все перечисленные удобства сразу, а не любое из них. */
   amenities: commaSeparated

@@ -34,7 +34,14 @@ export const createClubApplicationSchema = z.object({
   /** Телефон или email — формат не проверяется: пишут как удобно. */
   contact: z.string().trim().min(5).max(120),
   clubName: short,
+  /**
+   * Город строкой: название из справочника или вписанное руками, если города
+   * в справочнике нет (ADR-047). Выбранный из справочника приходит ещё
+   * и ссылкой `cityId` — по ней заявка превращается в клуб без повторного
+   * выбора (ADR-096).
+   */
   city: short,
+  cityId: optional(z.uuid()),
   address: optional(z.string().trim().max(200)),
   tableCount: optional(z.coerce.number().int().min(1).max(200)),
   /** «Проходят ли у вас турниры»: какие, как часто, сколько участников. */
@@ -58,6 +65,7 @@ export const clubApplicationViewSchema = z.object({
   contact: z.string(),
   clubName: z.string(),
   city: z.string(),
+  cityId: z.uuid().nullable(),
   address: z.string().nullable(),
   tableCount: z.number().int().nullable(),
   tournaments: z.string().nullable(),

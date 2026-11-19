@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { TELEGRAM_PATTERN, contactKindSchema } from './club.js';
 import { PRICE_KZT_MAX, priceUnitSchema, trafficSourceSchema } from './club-page.js';
 import { pageQuerySchema } from './pagination.js';
-import { cityRefSchema } from './place.js';
+import { cityIdListSchema, cityRefSchema } from './place.js';
 import {
   TIMES_OF_DAY,
   timeOfDaySchema,
@@ -830,7 +830,7 @@ const commaSeparated = z.string().transform((value) => value.split(',').map((par
 export const listCoachesSchema = pageQuerySchema.extend({
   /** Фамилия или имя словами. */
   search: z.string().trim().min(1).max(100).optional(),
-  cityId: commaSeparated.pipe(z.array(z.uuid()).min(1).max(20)).optional(),
+  cityId: cityIdListSchema.optional(),
   language: coachLanguageSchema.optional(),
 });
 export type ListCoachesQuery = z.infer<typeof listCoachesSchema>;
@@ -886,7 +886,7 @@ export const listTrainingsSchema = pageQuerySchema.extend({
   /** Конкретный клуб KTTF. */
   clubId: z.uuid().optional(),
   /** Город: клуба у клубной тренировки, иначе страницы тренера. */
-  cityId: commaSeparated.pipe(z.array(z.uuid()).min(1).max(20)).optional(),
+  cityId: cityIdListSchema.optional(),
   /** «Цена до», включительно. Тренировки без цены под такой фильтр не попадают. */
   priceTo: z.coerce.number().int().min(0).max(PRICE_KZT_MAX).optional(),
   /** Язык тренера; у клубной тренировки без тренера фильтр не проверить — она не попадает. */

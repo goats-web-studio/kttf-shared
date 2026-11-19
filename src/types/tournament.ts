@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { pageQuerySchema } from './pagination.js';
+import { cityIdListSchema } from './place.js';
 import { genderSchema, playerViewSchema } from './player.js';
 import { formatConfigSchema, seedingConfigSchema } from './tournament-format.js';
 
@@ -158,8 +159,11 @@ export const duplicateTournamentSchema = z.object({
 export type DuplicateTournamentInput = z.infer<typeof duplicateTournamentSchema>;
 
 export const listTournamentsSchema = pageQuerySchema.extend({
-  /** Город клуба-организатора. */
-  cityId: z.uuid().optional(),
+  /**
+   * Город клуба-организатора — один или несколько через запятую: область
+   * в фильтре раскрывается в свои города (ADR-096).
+   */
+  cityId: cityIdListSchema.optional(),
   clubId: z.uuid().optional(),
   /**
    * Турниры, куда записан игрок, — «Мои турниры» в кабинете (ADR-048).

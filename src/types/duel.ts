@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { pageQuerySchema } from './pagination.js';
-import { cityRefSchema } from './place.js';
+import { cityIdListSchema, cityRefSchema } from './place.js';
 
 /**
  * Дуэли и спарринги — ADR-065, `docs/13-duels-concept.md`.
@@ -325,7 +325,8 @@ export type AnnulDuelInput = z.infer<typeof annulDuelSchema>;
  */
 export const listDuelsSchema = pageQuerySchema.extend({
   scope: z.enum(['open', 'recent']).default('open'),
-  cityId: z.uuid().optional(),
+  /** Один город или несколько через запятую — область раскрыта (ADR-096). */
+  cityId: cityIdListSchema.optional(),
   clubId: z.uuid().optional(),
   kind: duelKindSchema.optional(),
   rated: z.stringbool().optional(),

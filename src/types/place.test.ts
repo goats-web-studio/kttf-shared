@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_FILTER_CITIES,
+  citiesInScope,
+  cityIdListSchema,
   createCitySchema,
   createCountrySchema,
+  createRegionSchema,
   distanceKm,
   nearestCity,
   updateCitySchema,
   updateCountrySchema,
+  updateRegionSchema,
 } from './place.js';
 
 const COUNTRY_ID = '00000000-0000-4000-8000-000000000001';
@@ -91,5 +96,70 @@ describe('ближайший город — ADR-093', () => {
       false,
     );
     expect(updateCitySchema.safeParse({ lat: null, lng: null }).success).toBe(true);
+  });
+});
+
+describe('области — ADR-096', () => {
+  const REGION = '00000000-0000-4000-8000-0000000000a1';
+  const OTHER_REGION = '00000000-0000-4000-8000-0000000000a2';
+  const KARAGANDA = '00000000-0000-4000-8000-0000000000c1';
+  const TEMIRTAU = '00000000-0000-4000-8000-0000000000c2';
+  const ALMATY = '00000000-0000-4000-8000-0000000000c3';
+  const PAVLODAR = '00000000-0000-4000-8000-0000000000c4';
+  const cities = [
+    { id: KARAGANDA, regionId: REGION },
+    { id: TEMIRTAU, regionId: REGION },
+    { id: ALMATY, regionId: null },
+    { id: PAVLODAR, regionId: OTHER_REGION },
+  ];
+
+  it('область раскрывается во все свои города', () => {
+    expect(citiesInScope([REGION], cities)).toEqual([KARAGANDA, TEMIRTAU]);
+  });
+
+  it('город остаётся собой, вперемешку с областью', () => {
+    expect(citiesInScope([ALMATY, REGION], cities)).toEqual([ALMATY, KARAGANDA, TEMIRTAU]);
+  });
+
+  it('город, выбранный и сам, и через область, — один раз', () => {
+    expect(citiesInScope([TEMIRTAU, REGION], cities)).toEqual([TEMIRTAU, KARAGANDA]);
+  });
+
+  it('неизвестный идентификатор пропускается', () => {
+    expect(citiesInScope(['00000000-0000-4000-8000-0000000000ff'], cities)).toEqual([]);
+  });
+
+  it('область создаётся в стране, страну у области не сменить', () => {
+    expect(
+      createRegionSchema.safeParse({ countryId: COUNTRY_ID, name: 'Карагандинская область' })
+        .success,
+    ).toBe(true);
+    expect(createRegionSchema.safeParse({ name: 'Карагандинская область' }).success).toBe(false);
+    expect(updateRegionSchema.safeParse({}).success).toBe(false);
+    expect(updateRegionSchema.parse({ countryId: COUNTRY_ID, isActive: false })).toEqual({
+      isActive: false,
+    });
+  });
+
+  it('город привязывается к области и выводится из неё', () => {
+    expect(
+      createCitySchema.parse({ countryId: COUNTRY_ID, regionId: REGION, name: 'Темиртау' })
+        .regionId,
+    ).toBe(REGION);
+    expect(
+      createCitySchema.parse({ countryId: COUNTRY_ID, name: 'Алматы' }).regionId,
+    ).toBeUndefined();
+    expect(updateCitySchema.parse({ regionId: null })).toEqual({ regionId: null });
+  });
+
+  it('фильтр принимает до 100 городов', () => {
+    const ids = (count: number): string =>
+      Array.from(
+        { length: count },
+        (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      ).join(',');
+    expect(cityIdListSchema.safeParse(ids(MAX_FILTER_CITIES)).success).toBe(true);
+    expect(cityIdListSchema.safeParse(ids(MAX_FILTER_CITIES + 1)).success).toBe(false);
+    expect(cityIdListSchema.safeParse('алматы').success).toBe(false);
   });
 });
