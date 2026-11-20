@@ -222,7 +222,16 @@ export const startRatingSchema = z
  * привяжется к заведённому им профилю.
  */
 export const createPlayerSchema = z
-  .object({ ...profile, startRating: startRatingSchema.optional() })
+  .object({
+    ...profile,
+    startRating: startRatingSchema.optional(),
+    /**
+     * Завести чужой профиль, хотя такой человек уже есть (ADR-100). Без
+     * флага сервер отвечает `PLAYER_DUPLICATE` со списком совпадений:
+     * тёзки с одним годом рождения бывают, но повтор нажатия — чаще.
+     */
+    allowDuplicate: z.boolean().optional(),
+  })
   .superRefine((value, ctx) => {
     agreeOnBirth(value, ctx);
     coachIsSingle(value, ctx);
@@ -239,6 +248,12 @@ export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
 export const confirmPlayerSchema = z.object({
   clubId: z.uuid(),
   startRating: startRatingSchema,
+  /**
+   * Подтвердить, хотя у человека с тем же именем и годом игровой профиль
+   * уже есть (ADR-100). Без флага — `PLAYER_DUPLICATE`: чаще всего это он
+   * сам, и ему надо привязаться к профилю, а не получить второй рейтинг.
+   */
+  allowDuplicate: z.boolean().optional(),
 });
 export type ConfirmPlayerInput = z.infer<typeof confirmPlayerSchema>;
 

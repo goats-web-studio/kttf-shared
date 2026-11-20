@@ -91,7 +91,18 @@ export const createClubSchema = z.object({
   hoursNote: optionalText.max(200).optional(),
   primaryContact: contactKindSchema.optional(),
 });
-export type CreateClubInput = z.infer<typeof createClubSchema>;
+
+/**
+ * Новый клуб — `POST /clubs`. Заводит его администратор платформы.
+ *
+ * `applicationId` — заявка, по которой клуб заведён (ADR-100). Владельцем
+ * становится тот, кто её подал, если подавал вошедшим; заявка отмечается
+ * обработанной той же транзакцией. Без заявки владелец — сам администратор.
+ */
+export const newClubSchema = createClubSchema.extend({
+  applicationId: z.uuid().optional(),
+});
+export type CreateClubInput = z.infer<typeof newClubSchema>;
 
 const create = createClubSchema.shape;
 
