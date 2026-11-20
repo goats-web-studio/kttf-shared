@@ -122,9 +122,21 @@ function pickWithoutClash(
   return found === -1 ? 0 : found;
 }
 
+/**
+ * Сколько групп получится.
+ *
+ * В группе не меньше двух человек: игрок один в группе не сыграет ни одной
+ * встречи, этап ему нечего предложить, и турнир встаёт на старте — пустые
+ * таблицы, «вызвать некого». Поэтому заданное число групп ограничено
+ * половиной состава: 2 участника при «4 группах» — одна группа на двоих.
+ */
 function resolveGroupCount(total: number, options: GroupSplitOptions): number {
   if (total === 0) return 0;
 
+  return Math.max(1, Math.min(requestedGroupCount(total, options), Math.floor(total / 2)));
+}
+
+function requestedGroupCount(total: number, options: GroupSplitOptions): number {
   const { groupCount, groupSize } = options;
   if (groupCount !== undefined && groupSize !== undefined) {
     throw new Error('splitIntoGroups: задайте либо groupCount, либо groupSize, но не оба');

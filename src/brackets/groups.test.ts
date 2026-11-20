@@ -35,14 +35,37 @@ describe('splitIntoGroups — раскладка', () => {
     expect(() => splitIntoGroups(seeded(4), { groupSize: 1 })).toThrow(/целым от 2/);
   });
 
-  it('групп не больше, чем участников', () => {
-    const { groups } = splitIntoGroups(seeded(3), { groupCount: 10 });
-    expect(groups).toHaveLength(3);
+  it('в группе не меньше двух: групп не больше половины состава', () => {
+    expect(splitIntoGroups(seeded(3), { groupCount: 10 }).groups).toHaveLength(1);
+    expect(splitIntoGroups(seeded(7), { groupCount: 4 }).groups).toHaveLength(3);
+  });
+
+  it('двое при «4 группах» — одна группа на двоих, а не две по одному', () => {
+    const { groups } = splitIntoGroups(seeded(2), { groupCount: 4 });
+    expect(groups.map((group) => group.participants)).toEqual([['s1', 's2']]);
+  });
+
+  it('ни при каком составе нет группы из одного человека', () => {
+    for (let total = 2; total <= 20; total += 1) {
+      for (const options of [
+        { groupCount: 4 },
+        { groupCount: 8 },
+        { groupSize: 2 },
+        { groupSize: 3 },
+      ]) {
+        const sizes = splitIntoGroups(seeded(total), options).groups.map(
+          (group) => group.participants.length,
+        );
+        expect(Math.min(...sizes)).toBeGreaterThanOrEqual(2);
+      }
+    }
   });
 
   it('размер группы переводится в число групп с округлением вверх', () => {
     expect(splitIntoGroups(seeded(10), { groupSize: 4 }).groups).toHaveLength(3);
     expect(splitIntoGroups(seeded(8), { groupSize: 4 }).groups).toHaveLength(2);
+    // 3 по 2 дали бы группу из одного — их две: 2 и 1 не бывает.
+    expect(splitIntoGroups(seeded(3), { groupSize: 2 }).groups).toHaveLength(1);
   });
 
   it('змейка: первая полоса слева направо, вторая справа налево', () => {
