@@ -112,11 +112,16 @@ export const feedPostItemSchema = z.object({
   validUntil: z.iso.date().nullable(),
 });
 
-/** Версия новости KTTF на другом языке — для карточки (ADR-098). */
+/**
+ * Версия новости KTTF на другом языке — для карточки (ADR-098): заголовок,
+ * начало текста и фото версии по порядку (ADR-099). Без фото — фото оригинала.
+ */
 export const feedTranslationSchema = z.object({
   locale: siteLocaleSchema,
   title: z.string(),
   excerpt: z.string(),
+  images: z.array(forumImageSchema),
+  /** Первое фото версии или `null` — для клиентов до ADR-099. */
   image: forumImageSchema.nullable(),
 });
 export type FeedTranslation = z.infer<typeof feedTranslationSchema>;

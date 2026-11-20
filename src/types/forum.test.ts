@@ -177,7 +177,7 @@ describe('forum — версии новости (ADR-098)', () => {
     expect(setForumTopicLocaleSchema.safeParse({ locale: 'kz' }).success).toBe(false);
   });
 
-  it('версия: заголовок и текст обязательны, обложка — одно фото форума или ничего', () => {
+  it('версия: заголовок и текст обязательны, фото — до четырёх фото форума по порядку', () => {
     expect(forumTranslationInputSchema.parse({ title: ' Жаңалық ', body: ' мәтін ' })).toEqual({
       title: 'Жаңалық',
       body: 'мәтін',
@@ -188,28 +188,82 @@ describe('forum — версии новости (ADR-098)', () => {
     expect(forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: '  ' }).success).toBe(
       false,
     );
+    const photos = [1, 2, 3, 4].map((n) => ({ ...image, width: n * 100 }));
     expect(
-      forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: 'т', image }).success,
-    ).toBe(true);
+      forumTranslationInputSchema.parse({ title: 'Жаңалық', body: 'т', images: photos }).images,
+    ).toEqual(photos);
     expect(
-      forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: 'т', image: null }).success,
-    ).toBe(true);
+      forumTranslationInputSchema.safeParse({
+        title: 'Жаңалық',
+        body: 'т',
+        images: [...photos, image],
+      }).success,
+    ).toBe(false);
     const foreign = { ...image, url: `/api/v1/files/clubs/${id}.webp` };
     expect(
-      forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: 'т', image: foreign })
+      forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: 'т', images: [foreign] })
         .success,
     ).toBe(false);
   });
 
-  it('версия в ответе — с языком и временем правки', () => {
+  it('новая тема несёт версии: каждый язык один раз и не язык оригинала', () => {
+    const topic = { sectionId: id, title: 'Новость', body: 'т', locale: 'ru' };
+    const kk = { locale: 'kk', title: 'Жаңалық', body: 'мәтін', images: [image] };
+    const en = { locale: 'en', title: 'News', body: 'text' };
+    expect(createForumTopicSchema.parse({ ...topic, translations: [kk, en] }).translations).toEqual(
+      [kk, en],
+    );
+    expect(createForumTopicSchema.safeParse({ ...topic, translations: [kk, kk] }).success).toBe(
+      false,
+    );
+    const same = createForumTopicSchema.safeParse({
+      ...topic,
+      translations: [{ ...en, locale: 'ru' }],
+    });
+    expect(same.success).toBe(false);
+    expect(same.error?.issues[0]?.path).toEqual(['translations', 0, 'locale']);
+    // Без языка оригинала — русский по умолчанию: русская версия не годится.
+    expect(
+      createForumTopicSchema.safeParse({
+        sectionId: id,
+        title: 'Новость',
+        body: 'т',
+        translations: [{ ...en, locale: 'ru' }],
+      }).success,
+    ).toBe(false);
+    expect(
+      createForumTopicSchema.safeParse({ ...topic, translations: [{ ...en, locale: 'de' }] })
+        .success,
+    ).toBe(false);
+  });
+
+  it('правка новости — язык оригинала и весь набор версий', () => {
+    const en = { locale: 'en', title: 'News', body: 'text', images: [image, image] };
+    expect(
+      updateForumPostSchema.parse({ body: 'т', locale: 'kk', translations: [en] }),
+    ).toMatchObject({ locale: 'kk', translations: [en] });
+    expect(updateForumPostSchema.parse({ body: 'т', translations: [] }).translations).toEqual([]);
+    expect(
+      updateForumPostSchema.safeParse({ body: 'т', locale: 'en', translations: [en] }).success,
+    ).toBe(false);
+    expect(updateForumPostSchema.safeParse({ body: 'т', translations: [en, en] }).success).toBe(
+      false,
+    );
+    // Язык оригинала не прислан — сверяет сервер: он знает язык темы.
+    expect(updateForumPostSchema.safeParse({ body: 'т', translations: [en] }).success).toBe(true);
+  });
+
+  it('версия в ответе — с языком, фото и временем правки', () => {
     const view = {
       locale: 'en',
       title: 'KTTF is open',
       body: 'Text',
-      image: null,
+      images: [image],
+      image,
       updatedAt: '2026-11-20T10:00:00.000Z',
     };
     expect(forumTranslationSchema.parse(view)).toEqual(view);
     expect(forumTranslationSchema.safeParse({ ...view, locale: 'fr' }).success).toBe(false);
+    expect(forumTranslationSchema.safeParse({ ...view, images: undefined }).success).toBe(false);
   });
 });

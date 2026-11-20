@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { siteLocaleSchema } from './locale.js';
+import { DEFAULT_NEWS_LOCALE, SITE_LOCALES, siteLocaleSchema, type SiteLocale } from './locale.js';
 import { pageQuerySchema } from './pagination.js';
 
 /**
@@ -257,6 +257,65 @@ export type ForumImage = z.infer<typeof forumImageSchema>;
 const postBody = z.string().trim().min(1).max(FORUM_POST_BODY_MAX);
 const images = z.array(forumImageSchema).max(FORUM_POST_IMAGES_MAX);
 
+/** Версий у новости — по одной на каждый язык сайта, кроме языка оригинала. */
+export const FORUM_TRANSLATIONS_MAX = SITE_LOCALES.length - 1;
+
+/**
+ * Версия новости KTTF на другом языке (ADR-098, ADR-099): заголовок, текст той
+ * же разметкой и до `FORUM_POST_IMAGES_MAX` фото по порядку — как у сообщения.
+ * Без фото показываются фото оригинала.
+ */
+export const forumTranslationInputSchema = z.object({
+  title: z.string().trim().min(3).max(FORUM_TOPIC_TITLE_MAX),
+  body: postBody,
+  images: images.optional(),
+});
+export type ForumTranslationInput = z.infer<typeof forumTranslationInputSchema>;
+
+/** Версия с языком — в создании новости и в правке её первого сообщения (ADR-099). */
+export const forumTopicTranslationInputSchema = forumTranslationInputSchema.extend({
+  locale: siteLocaleSchema,
+});
+export type ForumTopicTranslationInput = z.infer<typeof forumTopicTranslationInputSchema>;
+
+/** Версии новости: каждый язык — один раз. */
+const translationsInput = z
+  .array(forumTopicTranslationInputSchema)
+  .max(FORUM_TRANSLATIONS_MAX)
+  .superRefine((rows, context) => {
+    const seen = new Set<string>();
+
+    rows.forEach((row, index) => {
+      if (seen.has(row.locale)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Each language once',
+          path: [index, 'locale'],
+        });
+      }
+      seen.add(row.locale);
+    });
+  });
+
+/** Язык версии не совпадает с языком оригинала. */
+function versionsDiffer(
+  original: SiteLocale | undefined,
+  rows: readonly ForumTopicTranslationInput[] | undefined,
+  context: z.RefinementCtx,
+): void {
+  if (original === undefined || rows === undefined) return;
+
+  rows.forEach((row, index) => {
+    if (row.locale === original) {
+      context.addIssue({
+        code: 'custom',
+        message: 'A version cannot be in the original language',
+        path: ['translations', index, 'locale'],
+      });
+    }
+  });
+}
+
 export const createForumPostSchema = z.object({
   body: postBody,
   quote: forumQuoteInputSchema.optional(),
@@ -266,30 +325,53 @@ export const createForumPostSchema = z.object({
 });
 export type CreateForumPostInput = z.infer<typeof createForumPostSchema>;
 
-export const createForumTopicSchema = z.object({
-  sectionId: z.uuid(),
-  title: z.string().trim().min(3).max(FORUM_TOPIC_TITLE_MAX),
-  body: postBody,
-  images: images.optional(),
-  /**
-   * От чьего лица (ADR-098). Без него в новостях KTTF — от KTTF, в
-   * остальных разделах — от себя.
-   */
-  authoredAs: forumAuthoredAsSchema.optional(),
-  /** Язык оригинала — только у новостей KTTF; без него — `DEFAULT_NEWS_LOCALE`. */
-  locale: siteLocaleSchema.optional(),
-});
+export const createForumTopicSchema = z
+  .object({
+    sectionId: z.uuid(),
+    title: z.string().trim().min(3).max(FORUM_TOPIC_TITLE_MAX),
+    body: postBody,
+    images: images.optional(),
+    /**
+     * От чьего лица (ADR-098). Без него в новостях KTTF — от KTTF, в
+     * остальных разделах — от себя.
+     */
+    authoredAs: forumAuthoredAsSchema.optional(),
+    /** Язык оригинала — только у новостей KTTF; без него — `DEFAULT_NEWS_LOCALE`. */
+    locale: siteLocaleSchema.optional(),
+    /**
+     * Версии на других языках — только у новостей KTTF и только модератору;
+     * тема создаётся вместе с ними одним запросом (ADR-099).
+     */
+    translations: translationsInput.optional(),
+  })
+  .superRefine((input, context) => {
+    versionsDiffer(input.locale ?? DEFAULT_NEWS_LOCALE, input.translations, context);
+  });
 export type CreateForumTopicInput = z.infer<typeof createForumTopicSchema>;
 
 /**
  * Автор правит текст и фото; цитата остаётся как была. Режим «от чьего
  * лица» меняет автор, а у сообщения KTTF — любой модератор (ADR-098).
  */
-export const updateForumPostSchema = z.object({
-  body: postBody,
-  images: images.optional(),
-  authoredAs: forumAuthoredAsSchema.optional(),
-});
+export const updateForumPostSchema = z
+  .object({
+    body: postBody,
+    images: images.optional(),
+    authoredAs: forumAuthoredAsSchema.optional(),
+    /**
+     * Язык оригинала — только у первого сообщения новости KTTF и только
+     * модератору (ADR-099). Без него — как был.
+     */
+    locale: siteLocaleSchema.optional(),
+    /**
+     * Версии на других языках — там же и тому же. Это весь набор: каких языков
+     * в нём нет, те версии убираются; без поля версии не меняются (ADR-099).
+     */
+    translations: translationsInput.optional(),
+  })
+  .superRefine((input, context) => {
+    versionsDiffer(input.locale, input.translations, context);
+  });
 export type UpdateForumPostInput = z.infer<typeof updateForumPostSchema>;
 
 export const renameForumTopicSchema = z.object({
@@ -344,23 +426,22 @@ export const forumPostViewSchema = z.object({
 });
 export type ForumPostView = z.infer<typeof forumPostViewSchema>;
 
-// ---------------------------------------------------------------- версии новости (ADR-098)
+// ---------------------------------------------------------------- версии новости (ADR-098, ADR-099)
 
 /**
  * Версия новости KTTF на другом языке: заголовок, текст той же разметкой и
- * одна обложка. Без обложки показываются фото оригинала.
+ * фото по порядку — как у оригинала (ADR-099). Без фото показываются фото
+ * оригинала.
  */
-export const forumTranslationInputSchema = z.object({
-  title: z.string().trim().min(3).max(FORUM_TOPIC_TITLE_MAX),
-  body: postBody,
-  image: forumImageSchema.nullable().optional(),
-});
-export type ForumTranslationInput = z.infer<typeof forumTranslationInputSchema>;
-
 export const forumTranslationSchema = z.object({
   locale: siteLocaleSchema,
   title: z.string(),
   body: z.string(),
+  images: z.array(forumImageSchema),
+  /**
+   * Первое фото версии или `null` — для клиентов до ADR-099, которые знали
+   * одну обложку. Новые читают `images`.
+   */
   image: forumImageSchema.nullable(),
   updatedAt: z.iso.datetime(),
 });

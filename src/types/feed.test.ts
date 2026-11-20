@@ -128,7 +128,9 @@ describe('новость KTTF: голос и версии — ADR-098', () => {
     archived: false,
     coauthor: { playerId: ID, name: 'Аманбаев Арлан', photoUrl: null },
     locale: 'ru',
-    translations: [{ locale: 'kk', title: 'KTTF ашылды', excerpt: 'Платформа ашық', image: null }],
+    translations: [
+      { locale: 'kk', title: 'KTTF ашылды', excerpt: 'Платформа ашық', images: [], image: null },
+    ],
   };
 
   it('карточка несёт соавтора, язык оригинала и версии', () => {
@@ -137,6 +139,14 @@ describe('новость KTTF: голос и версии — ADR-098', () => {
       feedItemSchema.safeParse({ ...portal, coauthor: null, locale: null, translations: [] })
         .success,
     ).toBe(true);
+  });
+
+  it('версия несёт свои фото по порядку (ADR-099)', () => {
+    const photo = { url: `/api/v1/files/forum/${ID}.webp`, width: 1200, height: 800 };
+    const row = { ...portal.translations[0], images: [photo, photo], image: photo };
+    expect(feedItemSchema.safeParse({ ...portal, translations: [row] }).success).toBe(true);
+    const old = { ...portal.translations[0], images: undefined };
+    expect(feedItemSchema.safeParse({ ...portal, translations: [old] }).success).toBe(false);
   });
 
   it('версия — только на языке сайта', () => {
