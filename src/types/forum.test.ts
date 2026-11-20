@@ -14,7 +14,14 @@ import {
   listForumTopicsSchema,
   moderateForumTopicSchema,
   updateForumSectionSchema,
+  FORUM_AUTHORED_AS,
+  forumTranslationInputSchema,
+  forumTranslationSchema,
+  isKttfVoice,
+  setForumTopicLocaleSchema,
+  updateForumPostSchema,
 } from './forum.js';
+import { SITE_LOCALES } from './locale.js';
 import { notificationViewSchema } from './notification.js';
 
 const id = '7f0c2c5e-4c8b-4d7a-9a51-0d6f0c1a2b3c';
@@ -131,5 +138,78 @@ describe('forum — уведомления', () => {
         data: { ...topic, postId: null, number: null, reason: 'реклама' },
       }).success,
     ).toBe(true);
+  });
+});
+
+describe('forum — от чьего лица (ADR-098)', () => {
+  it('три режима; голос KTTF — оба, кроме «от себя»', () => {
+    expect(FORUM_AUTHORED_AS).toEqual(['SELF', 'KTTF', 'KTTF_WITH_COAUTHOR']);
+    expect(isKttfVoice('SELF')).toBe(false);
+    expect(isKttfVoice('KTTF')).toBe(true);
+    expect(isKttfVoice('KTTF_WITH_COAUTHOR')).toBe(true);
+  });
+
+  it('режим необязателен у ответа, темы и правки и не принимает чужих значений', () => {
+    expect(createForumPostSchema.parse({ body: 'да' }).authoredAs).toBeUndefined();
+    expect(createForumPostSchema.parse({ body: 'да', authoredAs: 'KTTF' }).authoredAs).toBe('KTTF');
+    expect(createForumPostSchema.safeParse({ body: 'да', authoredAs: 'CLUB' }).success).toBe(false);
+    expect(
+      updateForumPostSchema.parse({ body: 'да', authoredAs: 'KTTF_WITH_COAUTHOR' }).authoredAs,
+    ).toBe('KTTF_WITH_COAUTHOR');
+    const topic = { sectionId: id, title: 'Новость', body: 'текст' };
+    expect(
+      createForumTopicSchema.parse({ ...topic, authoredAs: 'KTTF', locale: 'kk' }),
+    ).toMatchObject({ authoredAs: 'KTTF', locale: 'kk' });
+  });
+});
+
+describe('forum — версии новости (ADR-098)', () => {
+  it('языки сайта — шесть, в порядке переключателя', () => {
+    expect(SITE_LOCALES).toEqual(['kk', 'en', 'ru', 'zh', 'ko', 'ja']);
+  });
+
+  it('язык оригинала у темы — только из языков сайта', () => {
+    expect(
+      createForumTopicSchema.safeParse({ sectionId: id, title: 'Новость', body: 'т', locale: 'de' })
+        .success,
+    ).toBe(false);
+    expect(setForumTopicLocaleSchema.safeParse({ locale: 'ja' }).success).toBe(true);
+    expect(setForumTopicLocaleSchema.safeParse({ locale: 'kz' }).success).toBe(false);
+  });
+
+  it('версия: заголовок и текст обязательны, обложка — одно фото форума или ничего', () => {
+    expect(forumTranslationInputSchema.parse({ title: ' Жаңалық ', body: ' мәтін ' })).toEqual({
+      title: 'Жаңалық',
+      body: 'мәтін',
+    });
+    expect(forumTranslationInputSchema.safeParse({ title: 'Жа', body: 'мәтін' }).success).toBe(
+      false,
+    );
+    expect(forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: '  ' }).success).toBe(
+      false,
+    );
+    expect(
+      forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: 'т', image }).success,
+    ).toBe(true);
+    expect(
+      forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: 'т', image: null }).success,
+    ).toBe(true);
+    const foreign = { ...image, url: `/api/v1/files/clubs/${id}.webp` };
+    expect(
+      forumTranslationInputSchema.safeParse({ title: 'Жаңалық', body: 'т', image: foreign })
+        .success,
+    ).toBe(false);
+  });
+
+  it('версия в ответе — с языком и временем правки', () => {
+    const view = {
+      locale: 'en',
+      title: 'KTTF is open',
+      body: 'Text',
+      image: null,
+      updatedAt: '2026-11-20T10:00:00.000Z',
+    };
+    expect(forumTranslationSchema.parse(view)).toEqual(view);
+    expect(forumTranslationSchema.safeParse({ ...view, locale: 'fr' }).success).toBe(false);
   });
 });

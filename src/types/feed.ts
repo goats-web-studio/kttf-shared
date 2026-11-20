@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { clubPodiumPlaceSchema } from './club-page.js';
-import { forumImageSchema } from './forum.js';
+import { forumCoauthorSchema, forumImageSchema } from './forum.js';
+import { siteLocaleSchema } from './locale.js';
 import { clubRefSchema, tournamentRefSchema } from './player-profile.js';
 import { tournamentStatusSchema } from './tournament.js';
 
@@ -107,7 +108,20 @@ export const feedPostItemSchema = z.object({
   validUntil: z.iso.date().nullable(),
 });
 
-/** Новость KTTF или запись игрока — тема форума, текст и фото первого сообщения. */
+/** Версия новости KTTF на другом языке — для карточки (ADR-098). */
+export const feedTranslationSchema = z.object({
+  locale: siteLocaleSchema,
+  title: z.string(),
+  excerpt: z.string(),
+  image: forumImageSchema.nullable(),
+});
+export type FeedTranslation = z.infer<typeof feedTranslationSchema>;
+
+/**
+ * Новость KTTF или запись игрока — тема форума, текст и фото первого
+ * сообщения. Источник новости — `KTTF`, если она от лица KTTF, иначе —
+ * написавший её (ADR-098).
+ */
 export const feedTopicItemSchema = z.object({
   ...base,
   type: z.enum(['PORTAL', 'PLAYER_POST']),
@@ -116,6 +130,12 @@ export const feedTopicItemSchema = z.object({
   images: z.array(forumImageSchema),
   /** Автор убрал запись в архив: на стене и в ленте её нет, у него — во вкладке «Архив». */
   archived: z.boolean(),
+  /** Соавтор новости от лица KTTF. */
+  coauthor: forumCoauthorSchema.nullable(),
+  /** Язык оригинала новости; у записей игроков `null`. */
+  locale: siteLocaleSchema.nullable(),
+  /** Версии на других языках — клиент выбирает по языку интерфейса. */
+  translations: z.array(feedTranslationSchema),
 });
 
 /**

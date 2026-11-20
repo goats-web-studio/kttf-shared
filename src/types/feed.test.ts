@@ -108,3 +108,35 @@ describe('страница «Лента» — ADR-097', () => {
     expect(feedItemSchema.safeParse({ ...item, section: undefined }).success).toBe(false);
   });
 });
+
+describe('новость KTTF: голос и версии — ADR-098', () => {
+  const portal = {
+    id: `topic:${ID}`,
+    type: 'PORTAL',
+    at: '2026-11-20T10:00:00.000Z',
+    source: { kind: 'KTTF', id: null, name: 'KTTF', imageUrl: null, slug: null },
+    discussion: null,
+    pinned: false,
+    hidden: false,
+    title: 'KTTF открыт',
+    excerpt: 'Платформа открыта',
+    images: [],
+    archived: false,
+    coauthor: { playerId: ID, name: 'Аманбаев Арлан', photoUrl: null },
+    locale: 'ru',
+    translations: [{ locale: 'kk', title: 'KTTF ашылды', excerpt: 'Платформа ашық', image: null }],
+  };
+
+  it('карточка несёт соавтора, язык оригинала и версии', () => {
+    expect(feedItemSchema.safeParse(portal).success).toBe(true);
+    expect(
+      feedItemSchema.safeParse({ ...portal, coauthor: null, locale: null, translations: [] })
+        .success,
+    ).toBe(true);
+  });
+
+  it('версия — только на языке сайта', () => {
+    const bad = { ...portal, translations: [{ ...portal.translations[0], locale: 'de' }] };
+    expect(feedItemSchema.safeParse(bad).success).toBe(false);
+  });
+});

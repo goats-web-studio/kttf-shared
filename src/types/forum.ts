@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { siteLocaleSchema } from './locale.js';
 import { pageQuerySchema } from './pagination.js';
 
 /**
@@ -133,6 +134,33 @@ export const forumSectionViewSchema = z.object({
 });
 export type ForumSectionView = z.infer<typeof forumSectionViewSchema>;
 
+// ---------------------------------------------------------------- от чьего лица (ADR-098)
+
+/**
+ * От чьего лица сообщение: от себя, от KTTF или от KTTF с соавтором.
+ * Голос KTTF — только модератору (администратору платформы); настоящий
+ * автор хранится всегда, но публично не показывается.
+ */
+export const FORUM_AUTHORED_AS = ['SELF', 'KTTF', 'KTTF_WITH_COAUTHOR'] as const;
+export const forumAuthoredAsSchema = z.enum(FORUM_AUTHORED_AS);
+export type ForumAuthoredAs = z.infer<typeof forumAuthoredAsSchema>;
+
+/** Имя портала там, где у сообщения KTTF стояло бы имя человека. */
+export const FORUM_BRAND_NAME = 'KTTF';
+
+/** Сообщение от лица KTTF — с соавтором или без. */
+export function isKttfVoice(value: ForumAuthoredAs): boolean {
+  return value !== 'SELF';
+}
+
+/** Соавтор сообщения KTTF — строка «соавтор: …» ссылкой на профиль. */
+export const forumCoauthorSchema = z.object({
+  playerId: z.uuid().nullable(),
+  name: z.string(),
+  photoUrl: z.string().nullable(),
+});
+export type ForumCoauthor = z.infer<typeof forumCoauthorSchema>;
+
 // ---------------------------------------------------------------- автор
 
 /**
@@ -161,12 +189,20 @@ export const forumTopicItemSchema = z.object({
   id: z.uuid(),
   section: z.object({ id: z.uuid(), slug: z.string(), title: z.string() }),
   title: z.string(),
+  /**
+   * Автор темы. У темы от лица KTTF — `null` для всех, кроме администратора
+   * (ADR-098): шапка — знак KTTF, человек — только `coauthor`.
+   */
   author: forumAuthorSchema.nullable(),
+  /** От чьего лица первое сообщение. */
+  authoredAs: forumAuthoredAsSchema,
+  coauthor: forumCoauthorSchema.nullable(),
   subject: forumSubjectSchema.nullable(),
   createdAt: z.iso.datetime(),
   /** Всего сообщений, первое тоже. Ответов — на одно меньше. */
   postsCount: z.number().int().nonnegative(),
   lastPostAt: z.iso.datetime(),
+  /** Автор последнего сообщения; у сообщения KTTF — «KTTF». */
   lastAuthorName: z.string().nullable(),
   pinned: z.boolean(),
   locked: z.boolean(),
@@ -225,6 +261,8 @@ export const createForumPostSchema = z.object({
   body: postBody,
   quote: forumQuoteInputSchema.optional(),
   images: images.optional(),
+  /** От чьего лица (ADR-098). Без него — от себя. */
+  authoredAs: forumAuthoredAsSchema.optional(),
 });
 export type CreateForumPostInput = z.infer<typeof createForumPostSchema>;
 
@@ -233,13 +271,24 @@ export const createForumTopicSchema = z.object({
   title: z.string().trim().min(3).max(FORUM_TOPIC_TITLE_MAX),
   body: postBody,
   images: images.optional(),
+  /**
+   * От чьего лица (ADR-098). Без него в новостях KTTF — от KTTF, в
+   * остальных разделах — от себя.
+   */
+  authoredAs: forumAuthoredAsSchema.optional(),
+  /** Язык оригинала — только у новостей KTTF; без него — `DEFAULT_NEWS_LOCALE`. */
+  locale: siteLocaleSchema.optional(),
 });
 export type CreateForumTopicInput = z.infer<typeof createForumTopicSchema>;
 
-/** Автор правит текст и фото; цитата остаётся как была. */
+/**
+ * Автор правит текст и фото; цитата остаётся как была. Режим «от чьего
+ * лица» меняет автор, а у сообщения KTTF — любой модератор (ADR-098).
+ */
 export const updateForumPostSchema = z.object({
   body: postBody,
   images: images.optional(),
+  authoredAs: forumAuthoredAsSchema.optional(),
 });
 export type UpdateForumPostInput = z.infer<typeof updateForumPostSchema>;
 
@@ -255,7 +304,14 @@ export const forumPostViewSchema = z.object({
   topicId: z.uuid(),
   /** Порядковый в теме, с единицы: ссылка «#12» и страница. */
   number: z.number().int().positive(),
+  /**
+   * Автор. У сообщения KTTF — `null` для всех, кроме администратора
+   * (ADR-098): шапка — знак KTTF.
+   */
   author: forumAuthorSchema.nullable(),
+  authoredAs: forumAuthoredAsSchema,
+  /** Соавтор сообщения KTTF — только в режиме `KTTF_WITH_COAUTHOR`. */
+  coauthor: forumCoauthorSchema.nullable(),
   /**
    * Текст. У удалённого автором — пустой для всех; у скрытого модератором —
    * пустой для всех, кроме автора и администратора.
@@ -288,8 +344,40 @@ export const forumPostViewSchema = z.object({
 });
 export type ForumPostView = z.infer<typeof forumPostViewSchema>;
 
+// ---------------------------------------------------------------- версии новости (ADR-098)
+
+/**
+ * Версия новости KTTF на другом языке: заголовок, текст той же разметкой и
+ * одна обложка. Без обложки показываются фото оригинала.
+ */
+export const forumTranslationInputSchema = z.object({
+  title: z.string().trim().min(3).max(FORUM_TOPIC_TITLE_MAX),
+  body: postBody,
+  image: forumImageSchema.nullable().optional(),
+});
+export type ForumTranslationInput = z.infer<typeof forumTranslationInputSchema>;
+
+export const forumTranslationSchema = z.object({
+  locale: siteLocaleSchema,
+  title: z.string(),
+  body: z.string(),
+  image: forumImageSchema.nullable(),
+  updatedAt: z.iso.datetime(),
+});
+export type ForumTranslation = z.infer<typeof forumTranslationSchema>;
+
+/** `PUT /forum/topics/:id/locale` — язык оригинала новости. */
+export const setForumTopicLocaleSchema = z.object({ locale: siteLocaleSchema });
+export type SetForumTopicLocaleInput = z.infer<typeof setForumTopicLocaleSchema>;
+
 /** Тема целиком: то же, первое сообщение отдельно и что может вошедший. */
 export const forumTopicViewSchema = forumTopicItemSchema.extend({
+  /**
+   * Язык оригинала — у новостей KTTF; у остальных тем `null`. Версии на
+   * других языках — `translations`, все сразу: клиент выбирает сам (ADR-098).
+   */
+  locale: siteLocaleSchema.nullable(),
+  translations: z.array(forumTranslationSchema),
   /**
    * Первое сообщение — «статья» над ответами, как у RTTF (ADR-067). Ответы —
    * `GET …/posts?replies=true` со своей сортировкой.
@@ -350,6 +438,8 @@ export const forumPostItemSchema = z.object({
   section: z.object({ slug: z.string(), title: z.string() }),
   subject: forumSubjectSchema.nullable(),
   author: forumAuthorSchema.nullable(),
+  authoredAs: forumAuthoredAsSchema,
+  coauthor: forumCoauthorSchema.nullable(),
   role: z.enum(FORUM_POST_ROLES).nullable(),
   /** Начало текста. */
   excerpt: z.string(),
