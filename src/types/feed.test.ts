@@ -95,6 +95,8 @@ describe('страница «Лента» — ADR-097', () => {
         comments: 3,
         likes: 1,
         views: 10,
+        liked: true,
+        mine: false,
       },
       pinned: false,
       hidden: false,
@@ -106,6 +108,8 @@ describe('страница «Лента» — ADR-097', () => {
     };
     expect(feedItemSchema.safeParse(item).success).toBe(true);
     expect(feedItemSchema.safeParse({ ...item, section: undefined }).success).toBe(false);
+    const noLiked = { ...item, discussion: { ...item.discussion, liked: undefined } };
+    expect(feedItemSchema.safeParse(noLiked).success).toBe(false);
   });
 });
 

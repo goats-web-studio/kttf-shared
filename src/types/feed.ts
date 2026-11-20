@@ -81,6 +81,10 @@ export const feedDiscussionSchema = z.object({
   comments: z.number().int().nonnegative(),
   likes: z.number().int().nonnegative(),
   views: z.number().int().nonnegative(),
+  /** Зритель уже «лайкнул» первое сообщение; у гостя — `false`. */
+  liked: z.boolean(),
+  /** Первое сообщение написал сам зритель — «лайкнуть» своё нельзя. */
+  mine: z.boolean(),
 });
 export type FeedDiscussion = z.infer<typeof feedDiscussionSchema>;
 

@@ -3125,4 +3125,5 @@ _Почему бонусы при известной критике на фор�
 - `kttf-back`: миграция `20261120100000_news_voice_i18n` (enum `ForumAuthoredAs`, поля `ForumPost.authoredAs`, `ForumTopic.authoredAs`, `ForumTopic.lastPostAuthoredAs`, `ForumTopic.locale`, таблица `ForumTopicTranslation`; только добавляет, плюс перевод старых новостей в `KTTF`), `ForumTranslationsService`
 - `kttf-shared`: `FORUM_AUTHORED_AS`, `forumCoauthorSchema`, поля `authoredAs`/`coauthor` в сообщении, теме и ленте форума, `SITE_LOCALES`, `forumTranslationSchema`, `forumTranslationInputSchema`, поля `locale`/`translations` у темы и карточки `PORTAL`; новые поля ответа необязательны для старых клиентов — мобилка их просто не читает
 - Списки тем, поиск и «последняя активность» раздела — на языке оригинала. Переводит модератор руками: машинного перевода нет
+- Обсуждение карточки ленты (`FeedDiscussion`) несёт `liked` (зритель «лайкнул» первое сообщение, у гостя `false`) и `mine` (первое сообщение — его): сердце карточки сразу закрашено, своё «лайкнуть» нельзя — клиент больше не угадывает по источнику карточки
 - Отложено: версии на языках у новостей клубов и тренеров, голос клуба или тренера вместо личного
